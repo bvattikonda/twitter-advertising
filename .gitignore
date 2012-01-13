@@ -1,3 +1,7 @@
 *.log
 *.pyc 
 *.pickle
+data
+graphs
+scratch
+tweepy
