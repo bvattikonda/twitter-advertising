@@ -57,18 +57,6 @@ def get_args():
         help = 'File with all the authentication details of applications')
     return parser.parse_args()
 
-def get_resolved_users(data_dir):
-    datafilename = os.path.join(data_dir, 'resolved_users.txt')
-    if os.path.exists(datafilename):
-        datafile = open(datafilename, 'r')
-        resolved_users = list()
-        for line in datafile:
-            resolved_users.append(int(line.strip()))
-        datafile.close()
-        return set(resolved_users)
-    else:
-        return set()
-
 def get_connections(data_dir):
     datafilename = os.path.join(data_dir, 'connections.txt')
     if os.path.exists(datafilename):
@@ -85,6 +73,18 @@ def get_connections(data_dir):
     else:
         return defaultdict(dict)
 
+def get_resolved_users(data_dir):
+    datafilename = os.path.join(data_dir, 'resolved_users.txt')
+    if os.path.exists(datafilename):
+        datafile = open(datafilename, 'r')
+        resolved_users = list()
+        for line in datafile:
+            resolved_users.append(int(line.strip()))
+        datafile.close()
+        return resolved_users
+    else:
+        return list()
+
 def get_suspended_users(data_dir):
     datafilename = os.path.join(data_dir, 'suspended_users.txt')
     if os.path.exists(datafilename):
@@ -93,9 +93,9 @@ def get_suspended_users(data_dir):
         for line in datafile:
             suspended_users.append(int(line.strip()))
         datafile.close()
-        return set(suspended_users)
+        return suspended_users
     else:
-        return set()
+        return list()
 
 def user_data(api_info, user_id):
     followers_ids_list, success = block_on_call(api_info, 'followers_ids',\
@@ -111,9 +111,7 @@ def user_data(api_info, user_id):
     return followers_ids_list, friends_ids_list
 
 def update_data(api_info,\
-    data_dir,\
     user_id,\
-    connections,\
     resolved_users,\
     suspended_users,\
     connections_file,\
@@ -122,16 +120,14 @@ def update_data(api_info,\
     if user_id in resolved_users:
         return
     followers, friends = user_data(api_info, user_id)
-    resolved_users.add(user_id)
+    resolved_users.append(user_id)
     if followers == None or friends == None:
-        suspended_users.add(user_id)
+        suspended_users.append(user_id)
         suspended_usersfile.write(str(user_id) + '\n')
     else:
-        connections[user_id]['Followers'] = followers
-        connections[user_id]['Friends'] = friends
         connections_file.write(str(user_id))
-        connections_file.write('-' + str(connections[user_id]['Followers']))
-        connections_file.write('-' + str(connections[user_id]['Friends']))
+        connections_file.write('-' + str(followers))
+        connections_file.write('-' + str(friends))
         connections_file.write('\n')
     resolved_usersfile.write(str(user_id) + '\n')
 
@@ -139,10 +135,23 @@ def flush_files(fileslist):
     for filep in fileslist:
         filep.flush()
 
+def get_user_connections(user_id, connections_filename):
+    connections_file = open(connections_filename, 'r')
+    for line in connections_file:
+        splitline = line.strip().split('-')
+        fetched_userid = int(splitline[0])
+        if user_id == fetched_userid:
+            followers = ast.literal_eval(splitline[1])
+            friends = ast.literal_eval(splitline[2])
+            connections_file.close()
+            return followers, friends
+    connections_file.close()
+    raise Exception('User information not fetched before')
+    return None, None
+
 def connected_users(api_info,\
-    data_dir,\
     root_users,\
-    connections,\
+    connections_filename,\
     resolved_users,\
     suspended_users,\
     connections_file,\
@@ -151,16 +160,17 @@ def connected_users(api_info,\
 
     print str(datetime.now()), 'Fetching information for depth 0'
     for screen_name, user_id in root_users:
-        update_data(api_info, data_dir, user_id,\
-            connections, resolved_users, suspended_users,\
+        update_data(api_info, user_id,\
+            resolved_users, suspended_users,\
             connections_file, resolved_usersfile, suspended_usersfile)
 
     print str(datetime.now()), 'Fetching information for depth 1'
     for screen_name, user_id in root_users:
+        followers, friends = get_user_connections(user_id, connections_filename)
         count = 0
-        for follower_id in connections[user_id]['Followers']:
-            update_data(api_info, data_dir, follower_id,\
-                connections, resolved_users, suspended_users,\
+        for follower_id in followers:
+            update_data(api_info, follower_id,\
+                resolved_users, suspended_users,\
                 connections_file, resolved_usersfile, suspended_usersfile)
             count = count + 1
             if count == 1000:
@@ -168,9 +178,9 @@ def connected_users(api_info,\
                     suspended_usersfile])
                 break
         count = 0
-        for friend_id in connections[user_id]['Friends']:
-            update_data(api_info, data_dir, follower_id,\
-                connections, resolved_users, suspended_users,\
+        for friend_id in friends:
+            update_data(api_info, follower_id,\
+                resolved_users, suspended_users,\
                 connections_file, resolved_usersfile, suspended_usersfile)
             count = count + 1
             if count == 1000:
@@ -178,6 +188,7 @@ def connected_users(api_info,\
                     suspended_usersfile])
                 break
             
+    sys.exit(1)
     print str(datetime.now()), 'Fetching information for depth 2'
     for screen_name, user_id in root_users:
         for connection_id in connections[user_id]['Followers'] + \
@@ -185,8 +196,8 @@ def connected_users(api_info,\
             if connection_id in connections:
                 count = 0
                 for follower_id in connections[user_id]['Followers']:
-                    update_data(api_info, data_dir, follower_id,\
-                        connections, resolved_users, suspended_users,\
+                    update_data(api_info, follower_id,\
+                        resolved_users, suspended_users,\
                         connections_file, resolved_usersfile,\
                         suspended_usersfile)
                     count = count + 1
@@ -196,8 +207,8 @@ def connected_users(api_info,\
                         break
                 count = 0
                 for friend_id in connections[user_id]['Friends']:
-                    update_data(api_info, data_dir, friend_id,\
-                        connections, resolved_users, suspended_users,\
+                    update_data(api_info, friend_id,\
+                        resolved_users, suspended_users,\
                         connections_file, resolved_usersfile,\
                         suspended_usersfile)
                     count = count + 1
@@ -215,7 +226,6 @@ def main():
         args.data_dir)
 
     resolved_users = get_resolved_users(args.data_dir)
-    connections = get_connections(args.data_dir)
     suspended_users = get_suspended_users(args.data_dir)
 
     connections_file = open(os.path.join(args.data_dir, 'connections.txt'), 'a')
@@ -224,11 +234,12 @@ def main():
 
     for domain in root_users:
         try:
-            connected_users(api_info, args.data_dir,\
-                root_users[domain], connections, resolved_users,\
-                suspended_users, connections_file, resolved_usersfile,\
-                suspended_usersfile)
+            connected_users(api_info, root_users[domain],\
+                os.path.join(args.data_dir, 'connections.txt'),\
+                resolved_users, suspended_users,\
+                connections_file, resolved_usersfile, suspended_usersfile)
         except:
+            print sys.exc_info()
             flush_files([connections_file, resolved_usersfile,\
                 suspended_usersfile])
             sys.exit(1)
