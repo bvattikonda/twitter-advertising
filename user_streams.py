@@ -12,9 +12,7 @@ import inspect
 import httplib
 from collections import namedtuple
 from multiprocessing import Pool
-
-RETRY_TIME = 10
-BACKOFF_TIME = 600
+from api_functions import *
 
 def print_members(element):
     for item in inspect.getmembers(element):
@@ -24,58 +22,6 @@ def dump_user_info(user_pickle_dir, user_info):
     cPickle.dump(user_info, open(os.path.join(user_pickle_dir,\
         str(user_info.id) + '.pickle'), 'wb'))
 
-def get_available_api(api_info):
-    while True:
-        for api in api_info:
-            try:
-                if get_remaining_hits(api) > 20:
-                    return api
-            except error.TweepError as e:
-                try:
-                    if e.response.status == httplib.BAD_GATEWAY:
-                        time.sleep(RETRY_TIME)
-                        continue
-                    elif e.response.status == httplib.SERVICE_UNAVAILABLE:
-                        time.sleep(RETRY_TIME)
-                        continue
-                    elif e.response.status == httplib.INTERNAL_SERVER_ERROR:
-                        time.sleep(RETRY_TIME)
-                        continue
-                    else:
-                        raise
-                except AttributeError:
-                    print_members(e)
-        time.sleep(BACKOFF_TIME)
-
-def get_remaining_hits(api):
-    return api.rate_limit_status()['remaining_hits']
-
-def print_remaining_hits(api_info):
-    for api in api_info:
-        print 'Remaining hits:', get_remaining_hits(api)
-
-def create_api_objects():
-    application_info = {'adsenser' : {'consumer_key' : 'VQNV36Py0WiXT4jBiHFLfg',\
-        'consumer_secret' : 'FCJBiILPzT6AIa7nbr4c2EMqtOklfWwBzFFmKO27y0',\
-        'access_token' : '419021038-y6i3DWUwrT1zsv5W7FsnsnRNttsUtqOUfZe1aE2t',\
-        'access_secret' : 'xFEjUtS5p3ufdxnI49ok12WwbfcJjlcOKuyEhxBm8M'},\
-        'adsenser1' : {'consumer_key' : 'mNUFIRmx1PwY3kUGqEPUw',\
-        'consumer_secret' : '6d4RJvbxVqrOhGpQNzclD6atB0Y26fO4RNAc3RNFi5E',\
-        'access_token' : '419021038-yGdNfxAWQ3YNHf81N8bjFvrFdLvfBzpE8YuNVF8z',\
-        'access_secret' : '03QjioFrZcE6XGBOTMJVYXQZBWJMXPlrFaPZkngzrF4'},
-        'adsenser2' : {'consumer_key' : 'h8zX88MO5UHVXUfpeoCPlw',\
-        'consumer_secret' : 'u1XchLEc2MAUjfYyhbYaYgMzBkaYiMaeVpgaPn2oBFQ',\
-        'access_token' : '419021038-r7dAVEhcPfoqbuVDNFe6STZwcdmwWvyEIFKesZhD',\
-        'access_secret' : '3Vu47GAWlz9PgYphR0tNNHdE7r0US53ZL8pU1gUzIc'}}
-    api_info = []
-    for name, credentials in application_info.items():
-        auth = OAuthHandler(credentials['consumer_key'],\
-            credentials['consumer_secret'])
-        auth.set_access_token(credentials['access_token'],\
-            credentials['access_secret'])
-        api_info.append(API(auth))
-    return api_info 
-
 def get_users():
     user_ids = cPickle.load(open('advertisers1.pickle', 'rb'))
     return user_ids
@@ -83,30 +29,6 @@ def get_users():
     for i in xrange(1000):
         final_users.add(user_ids.pop())
     return final_users
-
-def block_on_call(api_info, function_name, **kwargs):
-    while True:
-        api = get_available_api(api_info)
-        function = getattr(api, function_name)
-        try:
-            output = function(**kwargs)
-            return output, True
-        except error.TweepError as e:
-            try:
-                if e.response.status == httplib.BAD_GATEWAY:
-                    time.sleep(RETRY_TIME)
-                    continue
-                elif e.response.status == httplib.SERVICE_UNAVAILABLE:
-                    time.sleep(RETRY_TIME)
-                    continue
-                elif e.response.status == httplib.INTERNAL_SERVER_ERROR:
-                    time.sleep(RETRY_TIME)
-                    continue
-                else:
-                    print 'FAILED:', function_name, kwargs
-                    return None, False
-            except AttributeError:
-                print_members(e)
 
 def get_old_tweets(api_info, user_info):
     if not user_info.tweets:

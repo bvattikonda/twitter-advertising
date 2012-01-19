@@ -4,12 +4,12 @@
 
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)),\
-    'tweepy'))
-from tweepy import *
 from datetime import datetime
 import cPickle
 import inspect
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)),\
+    'tweepy'))
+from tweepy import *
 
 class Listener(StreamListener):
     def __init__(self, pickle_dir, api = None):
