@@ -65,7 +65,7 @@ def create_api_objects(authinfo_filename):
             credentials['consumer_secret'])
         auth.set_access_token(credentials['access_token'],\
             credentials['access_secret'])
-        api_info.append(API(auth))
+        api_info.append(API(auth, parser = parsers.JSONParser()))
     return api_info 
 
 def block_on_call(api_info, function_name, **kwargs):

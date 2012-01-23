@@ -22,7 +22,7 @@ def print_members(element):
         print item
 
 def get_root_users(api_info, count, data_dir):
-    picklefile = os.path.join(data_dir, 'inital_users.pickle')
+    picklefile = os.path.join(data_dir, 'initial_users.pickle')
     if os.path.exists(picklefile):
         root_users = cPickle.load(open(picklefile, 'rb'))
     else:
@@ -98,17 +98,38 @@ def get_suspended_users(data_dir):
         return list()
 
 def user_data(api_info, user_id):
-    followers_ids_list, success = block_on_call(api_info, 'followers_ids',\
-                                    user_id = user_id)
-    if not success:
-        return None, None
+    cursor = -1
+    followers = list()
+    while True:
+        output, success = block_on_call(api_info, 'followers_ids',\
+                                        user_id = user_id, cursor = cursor)
+        if isinstance(output, tuple):
+            followers += output[0]['ids']
+            cursor = output[1][1]
+            if cursor == 0:
+                break
+        else:
+            return None, None
+        if not success:
+            return None, None
 
-    friends_ids_list, success = block_on_call(api_info, 'friends_ids',\
-                                    user_id = user_id)
-    if not success:
-        return None, None
-    
-    return followers_ids_list, friends_ids_list
+    cursor = -1
+    friends = list()
+    while True:
+        output, success = block_on_call(api_info, 'friends_ids',\
+                                        user_id = user_id, cursor = cursor)
+        if isinstance(output, tuple):
+            friends += output[0]['ids']
+            cursor = output[1][1]
+            if cursor == 0:
+                break
+        else:
+            return None, None
+        if not success:
+            return None, None
+
+   
+    return followers, friends
 
 def update_data(api_info,\
     user_id,\
@@ -188,14 +209,16 @@ def connected_users(api_info,\
                     suspended_usersfile])
                 break
             
-    sys.exit(1)
     print str(datetime.now()), 'Fetching information for depth 2'
     for screen_name, user_id in root_users:
-        for connection_id in connections[user_id]['Followers'] + \
-            connections[user_id]['Friends']:
-            if connection_id in connections:
+        followers, friends = get_user_connections(user_id, connections_filename)
+        for connection_id in followers + friends:
+            if connection_id in resolved_users and connection_id not in\
+                suspended_users:
                 count = 0
-                for follower_id in connections[user_id]['Followers']:
+                connection_followers, connection_friends =\
+                    get_user_connections(connection_id, connections_filename)
+                for follower_id in connection_followers:
                     update_data(api_info, follower_id,\
                         resolved_users, suspended_users,\
                         connections_file, resolved_usersfile,\
@@ -206,7 +229,7 @@ def connected_users(api_info,\
                             suspended_usersfile])
                         break
                 count = 0
-                for friend_id in connections[user_id]['Friends']:
+                for friend_id in connection_friends:
                     update_data(api_info, friend_id,\
                         resolved_users, suspended_users,\
                         connections_file, resolved_usersfile,\
@@ -239,7 +262,7 @@ def main():
                 resolved_users, suspended_users,\
                 connections_file, resolved_usersfile, suspended_usersfile)
         except:
-            print sys.exc_info()
+            print datetime.now(), sys.exc_info()
             flush_files([connections_file, resolved_usersfile,\
                 suspended_usersfile])
             sys.exit(1)
