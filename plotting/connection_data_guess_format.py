@@ -9,8 +9,8 @@ import ast
 import argparse
 
 def get_args():
-    parser = argparse.ArgumentParser(description = 'Get unique followers\
-        for root users')
+    parser = argparse.ArgumentParser(description = 'Process connections\
+        data for analysis in GUESS')
     parser.add_argument('--connections', required = True,\
         help = 'Text file describing the connections of users')
     parser.add_argument('--outfile', required = True,\
