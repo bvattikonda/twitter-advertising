@@ -28,20 +28,20 @@ def get_root_users(api_info, count, data_dir):
     else:
         root_users = defaultdict(set)
 
-    interest_domains = ['spn.tw', 'adf.ly']
+    interest_domains = ['adf.ly', 'spn.tw']
     for domain in interest_domains:
         page_count = 1
         while True:
-            results, success = block_on_call(api_info, 'search',\
-                q = ad_domain, 
+            search_output, success = block_on_call(api_info, 'search',\
+                q = domain, 
                 rpp = 100,
                 page = page_count)
             if success:
                 if len(root_users[domain]) >= count:
                     break
-                for result in results:
-                    root_users[domain].add((result.from_user,\
-                        result.from_user_id))
+                for result in search_output['results']:
+                    root_users[domain].add((result['from_user'],\
+                        result['from_user_id']))
                 page_count += 1
                 if page_count == 15:
                     break
@@ -167,7 +167,7 @@ def get_user_connections(user_id, connections_filename):
             connections_file.close()
             return followers, friends
     connections_file.close()
-    raise Exception('User information not fetched before')
+    raise Exception('User information not fetched before %d' % (user_id))
     return None, None
 
 def connected_users(api_info,\
