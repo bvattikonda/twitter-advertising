@@ -28,14 +28,15 @@ def get_root_users(api_info, count, data_dir):
     else:
         root_users = defaultdict(set)
 
-    interest_domains = ['adf.ly', 'spn.tw']
+    interest_domains = ['adf.ly']
     for domain in interest_domains:
         page_count = 1
         while True:
             search_output, success = block_on_call(api_info, 'search',\
                 q = domain, 
                 rpp = 100,
-                page = page_count)
+                page = page_count,
+                lang = 'en')
             if success:
                 if len(root_users[domain]) >= count:
                     break

@@ -7,6 +7,12 @@ import sys
 import os 
 import ast 
 import argparse
+import cPickle
+import inspect
+
+def print_members(element):
+    for item in inspect.getmembers(element):
+        print item
 
 def get_args():
     parser = argparse.ArgumentParser(description = 'Process connections data\
@@ -25,8 +31,7 @@ def load_root_users(root_usersfilename):
     root_usersfile = open(root_usersfilename, 'r')
     root_users = set()
     for line in root_usersfile:
-        if 'adf.ly' in line:
-            root_users.add(int(line.strip().split()[1]))
+        root_users.add(int(line.strip()))
     return root_users
 
 def get_user_connections(user_id, connections_filename):
@@ -40,8 +45,7 @@ def get_user_connections(user_id, connections_filename):
             connections_file.close()
             return followers, friends
     connections_file.close()
-    raise Exception('User information not fetched before')
-    return None, None
+    raise Exception('User information not fetched before %d' % (user_id))
 
 def create_edge_list(root_users, connectionsfilename, outfilename,\
     indexfilename):
@@ -53,8 +57,12 @@ def create_edge_list(root_users, connectionsfilename, outfilename,\
 
     for user_id in root_users:
         start_vertex = graph_vertices.index(user_id)
-        followers, friends = get_user_connections(user_id,\
-            connectionsfilename)
+        try:
+            followers, friends = get_user_connections(user_id,\
+                connectionsfilename)
+        except Exception as e:
+            print e.message
+            continue
         for follower in followers:
             if follower not in graph_vertices:
                 graph_vertices.append(follower)
