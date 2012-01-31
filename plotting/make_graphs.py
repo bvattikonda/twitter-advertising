@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
-# This script is to plot the time difference in arrival of packets and if
-# packets were lost while going from one sender to one receiver
+# This script is the main graph to generate graphs for twitter data
 
 import sys
 import datetime

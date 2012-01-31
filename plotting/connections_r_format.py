@@ -51,12 +51,14 @@ def create_edge_list(root_users, connectionsfilename, outfilename,\
     indexfilename):
     outfile = open(outfilename, 'w')
     # Graph vertices list so that vertices are numbered from 0 to |V|
-    graph_vertices = list()
+    graph_vertices = dict()
+    vertex_index = 0
     for user in root_users:
-        graph_vertices.append(user)
+        graph_vertices[user] = vertex_index
+        vertex_index += 1
 
     for user_id in root_users:
-        start_vertex = graph_vertices.index(user_id)
+        start_vertex = graph_vertices[user_id]
         try:
             followers, friends = get_user_connections(user_id,\
                 connectionsfilename)
@@ -65,14 +67,15 @@ def create_edge_list(root_users, connectionsfilename, outfilename,\
             continue
         for follower in followers:
             if follower not in graph_vertices:
-                graph_vertices.append(follower)
-            end_vertex = graph_vertices.index(follower)
+                graph_vertices[follower] = vertex_index
+                vertex_index += 1
+            end_vertex = graph_vertices[follower]
             outfile.write(str(start_vertex) + ' ' + str(end_vertex) + '\n')
     
     indexfile = open(indexfilename, 'w')
     index = 0
-    for vertex in graph_vertices:           
-        indexfile.write(str(index) + ' ' + str(vertex) + '\n')
+    for user in graph_vertices:           
+        indexfile.write(str(graph_vertices[user]) + ' ' + str(user) + '\n')
         index += 1
     indexfile.close()
     outfile.close()
