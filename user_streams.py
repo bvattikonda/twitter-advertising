@@ -3,6 +3,8 @@
 import sys
 import os
 import time
+import argparse
+import StringIO
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)),\
     'tweepy'))
 from tweepy import *
@@ -18,121 +20,51 @@ def print_members(element):
     for item in inspect.getmembers(element):
         print item
 
-def dump_user_info(user_pickle_dir, user_info):
-    cPickle.dump(user_info, open(os.path.join(user_pickle_dir,\
-        str(user_info.id) + '.pickle'), 'wb'))
-
-def get_users():
-    user_ids = cPickle.load(open('advertisers1.pickle', 'rb'))
+def get_users(usersfilename):
+    user_ids = set()
+    usersfile = open(usersfilename, 'r')
+    for line in usersfile:
+        user_ids.add(int(line.strip()))
     return user_ids
-    final_users = set()
-    for i in xrange(1000):
-        final_users.add(user_ids.pop())
-    return final_users
 
-def get_old_tweets(api_info, user_info):
-    if not user_info.tweets:
-        tweets, success = block_on_call(api_info, 'user_timeline',\
-            id = user_info.id,\
-            count = 200,\
-            include_rts = 'true',\
-            trim_user = 'true',\
-            include_entities = 'true')
-        if not success:
-            user_info.error = True
-            user_info.suspended = True
-            user_info.suspension_moment = time.time()
-            return
-        else:
-            user_info.tweets.extend(tweets)
+def get_user_tweets(api_info, user_id):
+    all_tweets = list()
+    tweets, success = block_on_call(api_info, 'user_timeline',\
+        id = user_id,\
+        count = 200,\
+        include_rts = 'true',\
+        trim_user = 'true',\
+        include_entities = 'true')
+    if not success:
+        return None
+
+    all_tweets.extend(tweets)
+    if len(tweets) < 200:
+        all_tweets.reverse()
+        return all_tweets
 
     while True:
-        print '\t', user_info.screen_name, len(user_info.tweets)
+        print '\t', user_id, len(all_tweets)
         tweets, success = block_on_call(api_info, 'user_timeline',\
-            id = user_info.id,\
+            id = user_id,\
             count = 200,\
-            max_id = user_info.tweets[-1].id + 1,\
+            max_id = tweets[-1]['id'] + 1,\
             include_rts = 'true',\
             trim_user = 'true',\
             include_entities = 'true')
         if not success:
-            user_info.error = True
-            user_info.suspended = True
-            user_info.suspension_moment = time.time()
-        else:
-            user_info.tweets.extend(tweets)
+            return None
+
+        all_tweets.extend(tweets)
         if len(tweets) < 200:
-            user_info.tweets.reverse()
-            return
+            all_tweets.reverse()
+            return all_tweets
 
-def get_user_tweets(api_info, user_info):
-    if user_info.fetch_history:
-        get_old_tweets(api_info, user_info)
-        user_info.fetch_history = False
-        return
-
-    while True:
-        tweets, success = block_on_call(api_info, 'user_timeline',\
-            id = user_info.id,\
-            count = 200,\
-            since_id = user_info.tweets[-1].id,\
-            trim_user = 'true',\
-            include_entities = 'true')
-        if not success:
-            user_info.error = True
-            user_info.suspended = True
-            user_info.suspension_moment = time.time()
-            break
-        else:
-            tweets.reverse()
-            user_info.tweets.extend(tweets)
-            if len(tweets) < 200:
-                break
-
-def get_upto_date(api_info, user_info, user_pickle_dir):
-    print 'Updating for', user_info.screen_name
-    if not user_info.followers_fetched:
-        followers_ids_list, success = block_on_call(api_info, 'followers_ids',\
-            user_id = user_info.id)
-        if not success:
-            user_info.error = True
-            user_info.suspended = True
-            user_info.suspension_moment = time.time()
-        else:
-            user_info.followers_ids_list.extend(followers_ids_list)
-        user_info.followers_fetched = True
-        dump_user_info(user_pickle_dir, user_info)
-        print '\tFollowers fetched', len(user_info.followers_ids_list)
-    else:
-        print '\tFollowers already fetched', len(user_info.followers_ids_list)
-
-    if not user_info.friends_fetched:
-        friends_ids_list, success = block_on_call(api_info, 'friends_ids',\
-            user_id = user_info.id)
-        if not success:
-            user_info.error = True
-            user_info.suspended = True
-            user_info.suspension_moment = time.time()
-        else:
-            user_info.friends_ids_list.extend(friends_ids_list)
-        user_info.friends_fetched = True
-        dump_user_info(user_pickle_dir, user_info)
-        print '\tFriends fetched', len(user_info.friends_ids_list)
-    else:
-        print '\tFriends already fetched', len(user_info.friends_ids_list)
-    get_user_tweets(api_info, user_info) 
-    print '\tTweets: ', len(user_info.tweets)
-    user_info.fetch_history = False
-    user_info.last_updated = time.time()
-    dump_user_info(user_pickle_dir, user_info)
-
-def load_user_info(user_pickle_dir, user_id):
+def load_user_info(data_dir, user_id):
     user_info = None
-    if os.path.exists(os.path.join(user_pickle_dir, str(user_id) + '.pickle')):
-        print user_id
-        user_info = cPickle.load((open(os.path.join(user_pickle_dir,\
-                str(user_id) + '.pickle'), 'rb')))
-        return user_info
+    user_info_filename = os.path.join(data_dir, str(user_id), '.txt')
+    if os.path.exists(user_info_filename):
+        return open(user_info_filename, 'r')
     return None
 
 def lookup_user(api_info, user_id):
@@ -142,60 +74,90 @@ def lookup_user(api_info, user_id):
         return user_info_list[0]
     return None
 
-def create_attributes(user_info):
-    if not hasattr(user_info, 'tweets'):
-        setattr(user_info, 'tweets', list())
-    if not hasattr(user_info, 'followers_ids_list'):
-        setattr(user_info, 'followers_ids_list', list())
-    if not hasattr(user_info, 'followers_fetched'):
-        setattr(user_info, 'followers_fetched', False)
-    if not hasattr(user_info, 'friends_ids_list'):
-        setattr(user_info, 'friends_ids_list', list())
-    if not hasattr(user_info, 'friends_fetched'):
-        setattr(user_info, 'friends_fetched', False)
-    if not hasattr(user_info, 'fetch_history'):
-        setattr(user_info, 'fetch_history', True)
-    if not hasattr(user_info, 'last_updated'):
-        setattr(user_info, 'last_updated', None)
-    if not hasattr(user_info, 'suspended'):
-        setattr(user_info, 'suspended', False)
-    if not hasattr(user_info, 'suspension_moment'):
-        setattr(user_info, 'suspension_moment', None)
+def user_data(api_info, user_id):
+    cursor = -1
+    followers = list()
+    while True:
+        output, success = block_on_call(api_info, 'followers_ids',\
+                                        user_id = user_id, cursor = cursor)
+        if isinstance(output, tuple):
+            followers += output[0]['ids']
+            cursor = output[1][1]
+            if cursor == 0:
+                break
+        else:
+            return None, None
+        if not success:
+            return None, None
 
-def get_user_info(user_pickle_dir, api_info, user_id):
-    # try to load old pickle file
-    user_info = load_user_info(user_pickle_dir, user_id)
+    cursor = -1
+    friends = list()
+    while True:
+        output, success = block_on_call(api_info, 'friends_ids',\
+                                        user_id = user_id, cursor = cursor)
+        if isinstance(output, tuple):
+            friends += output[0]['ids']
+            cursor = output[1][1]
+            if cursor == 0:
+                break
+        else:
+            return None, None
+        if not success:
+            return None, None
 
-    # if not available, try to fetch the relevant information
-    if not user_info:
-        user_info = lookup_user(api_info, user_id)
+    return followers, friends
+
+def get_user_info(data_dir, api_info, user_id):
+    # Try to fetch the relevant information
+    user_info = lookup_user(api_info, user_id)
     
     # if failed to fetch, return
     if not user_info:
-        return
+        return None
 
-    # create attributes which are not available by default
-    create_attributes(user_info)
+    user_info_buffer = StringIO.StringIO()
+    user_info_buffer.write(str(user_info) + '\n')
+
+    followers, friends = user_data(api_info, user_id)
+    if not followers or not friends:
+        return None
+    user_info_buffer.write(str(followers) + '\n')
+    user_info_buffer.write(str(friends) + '\n')
     
-    if user_info.suspended:
-        return
-
-    dump_user_info(user_pickle_dir, user_info)
-
     # get the latest user information and dump to pickle file
-    get_upto_date(api_info, user_info, user_pickle_dir)
+    tweets = get_user_tweets(api_info, user_id)
+    user_info_buffer.write(str(tweets) + '\n')
+    return user_info_buffer
     
+def get_args():
+    parser = argparse.ArgumentParser(description = 'Get user details')
+    parser.add_argument('--data_dir', required = True,\
+        help = 'Directory to which the user info files can be stored')
+    parser.add_argument('--authfile', required = True,\
+        help = 'File with all the authentication details of applications')
+    parser.add_argument('--users', required = True,\
+        help = 'File with the users for whom information has to be fetched')
+    return parser.parse_args()
+
 def main():
-    user_pickle_dir = sys.argv[2]
-    api_info = create_api_objects()
+    args = get_args()
+    api_info = create_api_objects(args.authfile)
     print_remaining_hits(api_info)
 
     # Get users for whom we seek information
-    user_ids = get_users()
+    user_ids = get_users(args.users)
 
     for user_id in user_ids:
         try:
-            get_user_info(user_pickle_dir, api_info, user_id) 
+            userfilename = os.path.join(args.data_dir, str(user_id) + '.txt')
+            if os.path.exists(userfilename):
+                continue
+            user_info = get_user_info(args.data_dir, api_info, user_id) 
+            if not user_info:
+                continue
+            userfile = open(userfilename, 'w')
+            userfile.write(user_info.getvalue())
+            userfile.close()
         except:
             print 'FATAL:', user_id, sys.exc_info()
 

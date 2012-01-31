@@ -129,7 +129,6 @@ def user_data(api_info, user_id):
         if not success:
             return None, None
 
-   
     return followers, friends
 
 def update_data(api_info,\
