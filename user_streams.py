@@ -3,7 +3,7 @@
 import sys
 import os
 import time
-import argparse
+#import argparse
 import StringIO
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)),\
     'tweepy'))
@@ -21,10 +21,10 @@ def print_members(element):
         print item
 
 def get_users(usersfilename):
-    user_ids = set()
+    user_ids = list()
     usersfile = open(usersfilename, 'r')
     for line in usersfile:
-        user_ids.add(int(line.strip()))
+        user_ids.append(int(line.strip()))
     return user_ids
 
 def get_user_tweets(api_info, user_id):
@@ -62,7 +62,7 @@ def get_user_tweets(api_info, user_id):
 
 def load_user_info(data_dir, user_id):
     user_info = None
-    user_info_filename = os.path.join(data_dir, str(user_id), '.txt')
+    user_info_filename = os.path.join(data_dir, str(user_id) + '.txt')
     if os.path.exists(user_info_filename):
         return open(user_info_filename, 'r')
     return None
@@ -108,22 +108,38 @@ def user_data(api_info, user_id):
     return followers, friends
 
 def get_user_info(data_dir, api_info, user_id):
-    # Try to fetch the relevant information
-    user_info = lookup_user(api_info, user_id)
-    
-    # if failed to fetch, return
-    if not user_info:
-        return None
+    user_infofile = load_user_info(data_dir, user_id)
+    infoFound = False 
+    if user_infofile:
+        user_info_buffer = StringIO.StringIO()
+        try:
+            user_info_buffer.write(user_infofile.readline())
+            user_info_buffer.write(user_infofile.readline())
+            user_info_buffer.write(user_infofile.readline())
+            infoFound = True
+        except:
+            pass
 
-    user_info_buffer = StringIO.StringIO()
-    user_info_buffer.write(str(user_info) + '\n')
-
-    followers, friends = user_data(api_info, user_id)
-    if not followers or not friends:
-        return None
-    user_info_buffer.write(str(followers) + '\n')
-    user_info_buffer.write(str(friends) + '\n')
+    if not infoFound:
+        # Try to fetch the relevant information
+        user_info = lookup_user(api_info, user_id)
+        
+        # if failed to fetch, return
+        if not user_info:
+            raise Exception('User lookup failed %d' % (user_id))
     
+        print user_info['screen_name']
+        user_info_buffer = StringIO.StringIO()
+        user_info_buffer.write(str(user_info) + '\n')
+    
+        followers, friends = user_data(api_info, user_id)
+        if followers == None or friends == None:
+            raise Exception('User connections lookup failed %d' % (user_id))
+        user_info_buffer.write(str(followers) + '\n')
+        user_info_buffer.write(str(friends) + '\n')
+    else:
+        print 'Information found for %d' % (user_id)
+
     # get the latest user information and dump to pickle file
     tweets = get_user_tweets(api_info, user_id)
     user_info_buffer.write(str(tweets) + '\n')
@@ -140,7 +156,11 @@ def get_args():
     return parser.parse_args()
 
 def main():
-    args = get_args()
+    # args = get_args()
+    args = namedtuple('args', ['users', 'data_dir', 'authfile'])
+    args.data_dir = sys.argv[1]
+    args.authfile = sys.argv[2]
+    args.users = sys.argv[3]
     api_info = create_api_objects(args.authfile)
     print_remaining_hits(api_info)
 
@@ -149,12 +169,10 @@ def main():
 
     for user_id in user_ids:
         try:
-            userfilename = os.path.join(args.data_dir, str(user_id) + '.txt')
-            if os.path.exists(userfilename):
-                continue
             user_info = get_user_info(args.data_dir, api_info, user_id) 
             if not user_info:
                 continue
+            userfilename = os.path.join(args.data_dir, str(user_id) + '.txt')
             userfile = open(userfilename, 'w')
             userfile.write(user_info.getvalue())
             userfile.close()
