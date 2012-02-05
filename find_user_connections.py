@@ -15,6 +15,7 @@ sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)),\
     'tweepy'))
 from tweepy import *
 from api_functions import *
+from fetch_functions import *
 from constants import *
 
 def print_members(element):
@@ -98,39 +99,6 @@ def get_suspended_users(data_dir):
     else:
         return list()
 
-def user_data(api_info, user_id):
-    cursor = -1
-    followers = list()
-    while True:
-        output, success = block_on_call(api_info, 'followers_ids',\
-                                        user_id = user_id, cursor = cursor)
-        if isinstance(output, tuple):
-            followers += output[0]['ids']
-            cursor = output[1][1]
-            if cursor == 0:
-                break
-        else:
-            return None, None
-        if not success:
-            return None, None
-
-    cursor = -1
-    friends = list()
-    while True:
-        output, success = block_on_call(api_info, 'friends_ids',\
-                                        user_id = user_id, cursor = cursor)
-        if isinstance(output, tuple):
-            friends += output[0]['ids']
-            cursor = output[1][1]
-            if cursor == 0:
-                break
-        else:
-            return None, None
-        if not success:
-            return None, None
-
-    return followers, friends
-
 def update_data(api_info,\
     user_id,\
     resolved_users,\
@@ -140,7 +108,7 @@ def update_data(api_info,\
     suspended_usersfile):
     if user_id in resolved_users:
         return
-    followers, friends = user_data(api_info, user_id)
+    followers, friends = user_connections(api_info, user_id = user_id)
     resolved_users.append(user_id)
     if followers == None or friends == None:
         suspended_users.append(user_id)
