@@ -4,6 +4,7 @@ import sys
 import os
 import time
 import argparse
+import simplejson as json
 import StringIO
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)),\
     'tweepy'))
@@ -38,6 +39,7 @@ def load_user_info(data_dir, user_id):
 def get_user_info(data_dir, api_info, user_id):
     user_infofile = load_user_info(data_dir, user_id)
     infoFound = False 
+    tweetsFound = False
     if user_infofile:
         user_info_buffer = StringIO.StringIO()
         try:
@@ -58,19 +60,35 @@ def get_user_info(data_dir, api_info, user_id):
             raise Exception('User lookup failed %d' % (user_id))
     
         print user_info['screen_name']
-        user_info_buffer.write(str(user_info) + '\n')
+        user_info_buffer.write(json.dumps(user_info) + '\n')
     
         followers, friends = user_connections(api_info, user_id = user_id)
         if followers == None or friends == None:
             raise Exception('User connections lookup failed %d' % (user_id))
-        user_info_buffer.write(str(followers) + '\n')
-        user_info_buffer.write(str(friends) + '\n')
+        user_info_buffer.write(json.dumps(followers) + '\n')
+        user_info_buffer.write(json.dumps(friends) + '\n')
     else:
         print 'Information found for %d' % (user_id)
+        line = user_infofile.readline()
+        last_line = line
+        if len(line) > 0:
+            tweetsFound = True
+
+        while len(line) > 0:
+            user_info_buffer.write(line)
+            line = user_infofile.readline()
+            last_line = line
+        last_tweet = json.loads(last_line)
 
     # get the latest user information and dump to pickle file
-    tweets = get_user_tweets(api_info, user_id = user_id)
-    user_info_buffer.write(str(tweets) + '\n')
+    if tweetsFound:
+        tweets = get_new_user_tweets(api_info, user_id = user_id,
+            since_id = last_tweet['id'])
+    else:
+        tweets = get_user_tweets(api_info, user_id = user_id)
+
+    for tweet in tweets:
+        user_info_buffer.write(json.dumps(tweet) + '\n')
     return user_info_buffer
     
 def get_args():
