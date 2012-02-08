@@ -3,7 +3,7 @@
 import sys
 import os
 import time
-# import argparse
+import argparse
 import json
 import StringIO
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)),\
@@ -103,11 +103,7 @@ def get_args():
     return parser.parse_args()
 
 def main():
-    # args = get_args()
-    args = namedtuple('args', ['users', 'data_dir', 'authfile'])
-    args.data_dir = sys.argv[1]
-    args.authfile = sys.argv[2]
-    args.users = sys.argv[3]
+    args = get_args()
     api_info = create_api_objects(args.authfile)
     print_remaining_hits(api_info)
 
