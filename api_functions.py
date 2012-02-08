@@ -89,6 +89,6 @@ def block_on_call(api_info, function_name, **kwargs):
                     continue
                 else:
                     print 'FAILED:', function_name, kwargs
-                    return None, False
+                    raise
             except AttributeError:
                 print_members(e)
