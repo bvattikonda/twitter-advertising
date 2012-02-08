@@ -3,8 +3,8 @@
 import sys
 import os
 import time
-import argparse
-import simplejson as json
+# import argparse
+import json
 import StringIO
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)),\
     'tweepy'))
@@ -48,10 +48,10 @@ def get_user_info(data_dir, api_info, user_id):
             user_info_buffer.write(user_infofile.readline())
             infoFound = True
         except:
-            user_info_buffer = StringIO.StringIO()
             pass
 
     if not infoFound:
+        user_info_buffer = StringIO.StringIO()
         # Try to fetch the relevant information
         user_info = lookup_user(api_info, user_id = user_id)
         
@@ -76,12 +76,13 @@ def get_user_info(data_dir, api_info, user_id):
 
         while len(line) > 0:
             user_info_buffer.write(line)
-            line = user_infofile.readline()
             last_line = line
+            line = user_infofile.readline()
         last_tweet = json.loads(last_line)
 
     # get the latest user information and dump to pickle file
     if tweetsFound:
+        print 'Tweets found for %d' % (user_id)
         tweets = get_new_user_tweets(api_info, user_id = user_id,
             since_id = last_tweet['id'])
     else:
@@ -102,7 +103,11 @@ def get_args():
     return parser.parse_args()
 
 def main():
-    args = get_args()
+    # args = get_args()
+    args = namedtuple('args', ['users', 'data_dir', 'authfile'])
+    args.data_dir = sys.argv[1]
+    args.authfile = sys.argv[2]
+    args.users = sys.argv[3]
     api_info = create_api_objects(args.authfile)
     print_remaining_hits(api_info)
 

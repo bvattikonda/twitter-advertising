@@ -26,7 +26,7 @@ def get_available_api(api_info):
     while True:
         for api in api_info:
             try:
-                if get_remaining_hits(api) > 20:
+                if get_remaining_hits(api) > 5:
                     return api
             except error.TweepError as e:
                 try:
@@ -43,6 +43,7 @@ def get_available_api(api_info):
                         raise
                 except AttributeError:
                     print_members(e)
+        print 'Backing off'
         time.sleep(BACKOFF_TIME)
 
 def create_api_objects(authinfo_filename):

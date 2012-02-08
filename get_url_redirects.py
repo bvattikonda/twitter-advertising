@@ -83,18 +83,14 @@ def update_results(results_dir, results):
 
 def get_args():
     parser = argparse.ArgumentParser(description = 'Identify redirects')
-    parser.add_argument('--pickle_dir', required = True,\
-        help = 'User pickle files')
-    parser.add_argument('--results_dir', required = True,\
-        help = 'Directory into which the results must be saved')
+    parser.add_argument('--data_dir', required = True,\
+        help = 'User data files')
     parser.add_argument('--num_workers', default = 10, type = int,\
         help = 'Number of worker processes to spawn')
     return parser.parse_args()
-
      
-def load_user_info(pickle_dir, pickle_filename):
-    pickle_file = os.path.join(pickle_dir, pickle_filename)
-    return cPickle.load(open(pickle_file, 'rb'))
+def redirects_of_user():
+    
 
 def main():
     args = get_args()

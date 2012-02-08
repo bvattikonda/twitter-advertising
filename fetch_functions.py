@@ -26,27 +26,37 @@ def get_new_user_tweets(api_info,\
     if not since_id:
         return new_tweets
 
+    current_since_id = since_id
     while True:
+        print '\t', len(new_tweets)
         if screen_name:
             tweets, success = block_on_call(api_info, 'user_timeline',\
                 screen_name = screen_name,\
+                count = 200,
+                since_id = current_since_id,\
                 include_rts = 'true',\
-                trim_user = 'true',
+                trim_user = 'true',\
                 include_entities = 'true')
         elif user_id:
             tweets, success = block_on_call(api_info, 'user_timeline',\
-                screen_name = screen_name,\
+                id = user_id,\
+                count = 200,\
+                since_id = current_since_id,\
                 include_rts = 'true',\
                 trim_user = 'true',
                 include_entities = 'true')
         else:
-            return new_tweets
+            break
         
         if success:
+            if len(tweets) == 0:
+                break
             tweets.reverse()
             new_tweets.extend(tweets)
+            current_since_id = new_tweets[-1]['id']
             if len(tweets) < 200:
-                return new_tweets
+                break
+    return new_tweets
 
 def get_user_tweets(api_info, user_id = None, screen_name = None):
     if not user_id and screen_name:
