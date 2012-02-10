@@ -91,7 +91,7 @@ class ResolveURLThread(Thread):
         self.user_ids = user_ids
         self.data_dir = data_dir
         self.failfile = open(os.path.join(data_dir, self.getName() +\
-            '_fail.txt'), 'w')
+            '.fail'), 'w')
     
     def run(self):
         for user_id in self.user_ids:
