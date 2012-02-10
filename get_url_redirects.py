@@ -8,6 +8,8 @@ from urlredirects import *
 from utils import *
 from datetime import datetime
 import inspect
+from threading import Thread
+import math
 
 def print_members(element):
     for item in inspect.getmembers(element):
@@ -34,6 +36,7 @@ def get_resolved_urls(linksfilename):
     return resolved_urls
 
 def resolve_redirects(user_id, data_dir):
+    print 'Resolving', user_id
     linksfilename = os.path.join(data_dir, str(user_id) + '.links')
     resolved_urls = get_resolved_urls(linksfilename)
     linksfile = open(linksfilename, 'a')
@@ -82,22 +85,53 @@ def resolve_redirects(user_id, data_dir):
             resolved_urls.add(baseURL)
         line = datafile.readline().strip()
 
+class ResolveURLThread(Thread):
+    def __init__(self, user_ids, data_dir):
+        Thread.__init__(self)
+        self.user_ids = user_ids
+        self.data_dir = data_dir
+        self.failfile = open(os.path.join(data_dir, self.getName() +\
+            '_fail.txt'), 'w')
+    
+    def run(self):
+        for user_id in self.user_ids:
+            try: 
+                resolve_redirects(user_id, self.data_dir)
+            except:
+                print >>self.failfile, user_id
+
+# could return less than n chunks
+def chunks(l, n):
+    a = int(math.ceil(len(l) / float(n)))
+    for i in xrange(0, len(l), a):
+        yield l[i:i+a]
+
 def main():
     args = get_args()
     filenames = os.listdir(args.data_dir)
     count = 0
     total = len(filenames)
 
-    f = open('failed.txt', 'w')
+    user_ids = list()
     for filename in filenames:
-        print filename, count, total
         count = count + 1
         if filename.endswith('.txt'):
             user_id = int(filename.split('.')[0])
-            try:
-                resolve_redirects(user_id, args.data_dir)
-            except:
-                print >>f, user_id
+            user_ids.append(user_id)
+
+    sublist_generator = chunks(user_ids, args.num_workers)
+    workerThreads = list()
+    for i in xrange(args.num_workers):
+        try:
+            workerThread = ResolveURLThread(sublist_generator.next(),\
+                args.data_dir)
+        except StopIteration:
+            break
+        workerThread.start()
+        workerThreads.append(workerThread)
+
+    for workerThread in workerThreads:
+        workerThread.join()
 
 if __name__ == '__main__':
     main()
