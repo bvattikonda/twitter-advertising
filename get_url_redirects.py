@@ -1,8 +1,12 @@
 import sys
 import os
+import time
 import json
 import StringIO
+import urllib
 import urllib2
+import urlparse
+import httplib
 import argparse
 from multiprocessing import Pool
 from urlredirects import *
@@ -61,6 +65,48 @@ def handle_outcome(outcome, success, baseURL, linksfile, contentDir):
             json.dumps(success) + '\t' +\
             str(outcome) + '\n')
 
+def fixURL(baseURL):
+    parseresult = urlparse.urlparse(baseURL) 
+    if len(parseresult.scheme) == 0:
+        baseURL = 'http://' + baseURL
+        return baseURL
+    return baseURL
+   
+def fixURLEncoding(baseURL):
+    # turn string into unicode
+    if not isinstance(baseURL,unicode):
+        baseURL = baseURL.decode('utf8')
+
+    # parse it
+    parsed = urlparse.urlsplit(baseURL)
+
+    # divide the netloc further
+    userpass,at,hostport = parsed.netloc.partition('@')
+    user,colon1,pass_ = userpass.partition(':')
+    host,colon2,port = hostport.partition(':')
+
+    # encode each component
+    scheme = parsed.scheme.encode('utf8')
+    user = urllib.quote(user.encode('utf8'))
+    colon1 = colon1.encode('utf8')
+    pass_ = urllib.quote(pass_.encode('utf8'))
+    at = at.encode('utf8')
+    host = host.encode('idna')
+    colon2 = colon2.encode('utf8')
+    port = port.encode('utf8')
+    path = '/'.join(  # could be encoded slashes!
+        urllib.quote(urllib.unquote(pce).encode('utf8'),'')
+        for pce in parsed.path.split('/')
+    )
+    query = urllib.quote(urllib.unquote(parsed.query).\
+                encode('utf8'),'=&?/')
+    fragment = urllib.quote(urllib.unquote(parsed.fragment).\
+                encode('utf8'))
+
+    # put it back together
+    netloc = ''.join((user,colon1,pass_,at,host,colon2,port))
+    return urlparse.urlunsplit((scheme,netloc,path,query,fragment))
+
 def resolve_redirects(user_id, data_dir):
     # create the file to which links will be saved and content of the
     # files will be saved
@@ -84,15 +130,15 @@ def resolve_redirects(user_id, data_dir):
             success = False
             # find baseURL
             if url['expanded_url']:
-                baseURL = url['expanded_url']
+                baseURL = url['expanded_url'].strip()
             elif url['url']:
-                baseURL = url['url']
+                baseURL = url['url'].strip()
             else:
                 continue
 
             # Fix poorly formatted link
-            if not baseURL.startswith('http://'):
-                baseURL = 'http://' + baseURL
+            baseURL = fixURL(baseURL)
+            baseURL = fixURLEncoding(baseURL)
             if baseURL in resolved_urls:
                 continue
 
@@ -107,6 +153,9 @@ def resolve_redirects(user_id, data_dir):
                     outcome = redirects.reason
                 else:
                     outcome = e 
+            except httplib.InvalidURL:
+                print baseURL
+                raise
             handle_outcome(outcome, success, baseURL, linksfile, contentDir)
             resolved_urls.add(baseURL)
         line = datafile.readline().strip()
@@ -121,7 +170,7 @@ class ResolveURLThread(Thread):
     
     def run(self):
         for user_id in self.user_ids:
-            try: 
+            try:
                 resolve_redirects(user_id, self.data_dir)
             except:
                 print sys.exc_info()
@@ -154,11 +203,18 @@ def main():
                 args.data_dir)
         except StopIteration:
             break
+        workerThread.daemon = True
         workerThread.start()
         workerThreads.append(workerThread)
 
-    for workerThread in workerThreads:
-        workerThread.join()
+    while True:
+        time.sleep(100)
+        allExited = True
+        for workerThread in workerThreads:
+            if workerThread.isAlive():
+                allExited = False
+        if allExited:
+            return
 
 if __name__ == '__main__':
     main()
