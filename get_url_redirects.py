@@ -155,7 +155,10 @@ def resolve_redirects(user_id, data_dir):
                     outcome = e 
             except Exception as e:
                 outcome = str(e)
-            handle_outcome(outcome, success, baseURL, linksfile, contentDir)
+            try:
+                handle_outcome(outcome, success, baseURL, linksfile, contentDir)
+            except:
+                pass
             resolved_urls.add(baseURL)
         line = datafile.readline().strip()
 
