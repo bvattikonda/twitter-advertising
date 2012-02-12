@@ -3,6 +3,7 @@ import os
 import time
 import json
 import StringIO
+import socket
 import urllib
 import urllib2
 import urlparse
@@ -108,8 +109,7 @@ def fixURLEncoding(baseURL):
     return urlparse.urlunsplit((scheme,netloc,path,query,fragment))
 
 def resolve_redirects(user_id, data_dir):
-    # create the file to which links will be saved and content of the
-    # files will be saved
+    # create the file to which links will be saved 
     print 'Resolving', user_id
     linksfilename = os.path.join(data_dir, str(user_id) + '.links')
     resolved_urls = get_resolved_urls(linksfilename)
@@ -153,9 +153,8 @@ def resolve_redirects(user_id, data_dir):
                     outcome = redirects.reason
                 else:
                     outcome = e 
-            except httplib.InvalidURL:
-                print baseURL
-                raise
+            except Exception as e:
+                outcome = str(e)
             handle_outcome(outcome, success, baseURL, linksfile, contentDir)
             resolved_urls.add(baseURL)
         line = datafile.readline().strip()
@@ -208,7 +207,7 @@ def main():
         workerThreads.append(workerThread)
 
     while True:
-        time.sleep(100)
+        time.sleep(1000)
         allExited = True
         for workerThread in workerThreads:
             if workerThread.isAlive():
