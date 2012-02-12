@@ -1,6 +1,7 @@
 import sys
 import os
 import json
+import StringIO
 import urllib2
 import argparse
 from multiprocessing import Pool
@@ -35,12 +36,42 @@ def get_resolved_urls(linksfilename):
         linksfile.close()
     return resolved_urls
 
+def handle_outcome(outcome, success, baseURL, linksfile, contentDir):
+    if success:
+        filecontents = StringIO.StringIO()
+        filecontents.write(outcome.urlhandle.read())
+        filecontents.seek(0)
+        md5 = hashlib.md5()
+        md5.update(filecontents.getvalue())
+        md5sum = md5.hexdigest()
+        linksfile.write(json.dumps(datetime.now(),\
+            default = datehandler) + '\t' +\
+            baseURL + '\t' +\
+            json.dumps(success) + '\t' +\
+            str(outcome.redirects) + '\t' + \
+            md5sum + '\n')
+        contentfile = open(os.path.join(contentDir,\
+            md5sum), 'w')
+        contentfile.write(filecontents.getvalue())
+        contentfile.close()
+    else:
+        linksfile.write(json.dumps(datetime.now(),\
+            default = datehandler) + '\t' +\
+            baseURL + '\t' +\
+            json.dumps(success) + '\t' +\
+            str(outcome) + '\n')
+
 def resolve_redirects(user_id, data_dir):
+    # create the file to which links will be saved and content of the
+    # files will be saved
     print 'Resolving', user_id
     linksfilename = os.path.join(data_dir, str(user_id) + '.links')
     resolved_urls = get_resolved_urls(linksfilename)
     linksfile = open(linksfilename, 'a')
     datafilename = os.path.join(data_dir, str(user_id) + '.txt')
+    contentDir = os.path.join(data_dir, str(user_id))
+    if not os.path.exists(contentDir):
+        os.mkdir(contentDir)
     datafile = open(datafilename, 'r')
     # ignore userinfo, friends and followers
     datafile.readline()
@@ -67,21 +98,16 @@ def resolve_redirects(user_id, data_dir):
 
             # Get redirects and write to file
             try:
-                redirects = get_redirects(baseURL)
+                outcome = get_redirects(baseURL)
                 success = True
             except urllib2.HTTPError as e:
-                redirects = (e.code, e.msg)
+                outcome = (e.code, e.msg)
             except urllib2.URLError as e:
                 if isinstance(e, str):
-                    redirects = redirects.reason
+                    outcome = redirects.reason
                 else:
-                    redirects = e 
-
-            linksfile.write(json.dumps(datetime.now(),\
-                default = datehandler) + '\t' +\
-                baseURL + '\t' +\
-                json.dumps(success) + '\t' +\
-                str(redirects) + '\n')
+                    outcome = e 
+            handle_outcome(outcome, success, baseURL, linksfile, contentDir)
             resolved_urls.add(baseURL)
         line = datafile.readline().strip()
 
@@ -98,6 +124,7 @@ class ResolveURLThread(Thread):
             try: 
                 resolve_redirects(user_id, self.data_dir)
             except:
+                print sys.exc_info()
                 print >>self.failfile, user_id
 
 # could return less than n chunks
