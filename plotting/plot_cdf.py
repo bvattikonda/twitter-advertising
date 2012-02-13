@@ -65,8 +65,6 @@ def get_args():
         'destination_dir', help = 'Directory to which graphs should be saved')
     parser.add_argument('--datafile', required = True,\
         help = 'File which has all the numbers')
-    parser.add_argument('--links_dir', required = True,\
-        help = 'Directory which has links data')
     return parser.parse_args()
 
 def main():
@@ -74,15 +72,17 @@ def main():
     fig = create_figure()
     plot_data = list()
     for line in open(args.datafile, 'r'):
-        plot_data.append(int(line))
+        plot_data.append(float(line))
     print len(plot_data)
     subplot = fig.add_subplot(1, 1, 1)
     plot_cdf(subplot, plot_data)
-    subplot.set_xlabel('Number of followers', fontproperties = LABEL_PROP)
+    subplot.set_xlabel('Unique domains by scammers', fontproperties = LABEL_PROP)
     subplot.set_ylabel('CDF', fontproperties = LABEL_PROP)
-    subplot.set_title('Follower count for scammers', fontproperties = TITLE_PROP) 
+    subplot.set_title('Unique domains by scammers', fontproperties = TITLE_PROP) 
     subplot.set_ylim(0, 1)
-    print_figure(fig, args.destination_dir, 'followers_for_scammers', args.extension)
+    subplot.set_xlim(0, 400)
+    print_figure(fig, args.destination_dir,\
+        'unique_domains_by_scammers', args.extension)
 
 if __name__ == '__main__':
     main()
