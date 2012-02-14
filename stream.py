@@ -25,6 +25,7 @@ class Listener(StreamListener):
             str(self.saved + self.tweets_per_file) + '.tweets'), 'w')
         self.start_time = datetime.now()
         self.local_start = datetime.now()
+        self.max_rate = 0
 
     def print_rate(self):
         current_time = datetime.now()
@@ -33,8 +34,10 @@ class Listener(StreamListener):
         local_rate = self.tweets_per_file /\
                         total_mins(self.local_start, current_time)
         self.local_start = datetime.now()
-        print 'Receiving at: %.2f %.2f tweets per minute' %\
-            (global_rate, local_rate)
+        if local_rate > self.max_rate:
+            self.max_rate = local_rate
+        print 'Avg: %.2f Current: %.2f Max: %.2f' %\
+            (global_rate, local_rate, self.max_rate)
 
     def on_data(self, data):
         if data.isdigit():
