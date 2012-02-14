@@ -4,7 +4,6 @@
 data
 graphs
 scratch
-tweepy
 guess
 *.swp
 .*

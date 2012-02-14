@@ -109,6 +109,7 @@ class Stream(object):
                 conn.request('POST', self.url, self.body, headers=self.headers)
                 resp = conn.getresponse()
                 if resp.status != 200:
+                    print resp.read()
                     if self.listener.on_error(resp.status) is False:
                         break
                     error_counter += 1
@@ -187,9 +188,10 @@ class Stream(object):
 
     def sample(self, count=None, async=False):
         self.parameters = {'delimited': 'length'}
+        self.parameters['stall_warnings'] = 'true'
         if self.running:
             raise TweepError('Stream object already connected!')
-        self.url = '/%i/statuses/sample.json?delimited=length' % STREAM_VERSION
+        self.url = '/%i/statuses/sample.json?delimited=length&stall_warnings=true' % STREAM_VERSION
         if count:
             self.url += '&count=%s' % count
         self._start(async)
