@@ -5,6 +5,7 @@ import os
 from datetime import datetime
 import inspect
 import json
+import logging
 import optparse
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)),\
     'tweepy'))
@@ -36,6 +37,9 @@ class Listener(StreamListener):
         self.local_start = datetime.now()
         if local_rate > self.max_rate:
             self.max_rate = local_rate
+        logging.info('Avg: %.2f Current: %.2f Max: %.2f' %\
+            (global_rate, local_rate, self.max_rate))
+
         print 'Avg: %.2f Current: %.2f Max: %.2f' %\
             (global_rate, local_rate, self.max_rate)
 
@@ -44,8 +48,8 @@ class Listener(StreamListener):
             return True
         message = json.loads(data)
         if 'warning' in message:
-            print message
-            return False
+            logging.warning(data)
+
         self.unsaved += 1
         self.current_file.write(data + '\n')
         if self.unsaved == self.tweets_per_file:
@@ -79,12 +83,23 @@ def get_args():
 def main():
     options = get_args()
     api_info = create_api_objects(options.authfile)
+    logging.basicConfig(filename = os.path.join(options.data_dir,\
+        'stream.log'),\
+        format = '%(asctime)s - %(levelname)s - %(message)s',\
+        level = logging.DEBUG)
     # We can only use one API object for streaming Twitter data
     api = api_info[0]
 
-    streamer = Listener(options.data_dir, api = api)
+    logging.critical('Begin streaming')
+    streamer = Listener(options.data_dir,\
+        api = api)
     stream = Stream(api.auth, streamer, secure = True)
     stream.sample()
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except:
+        logging.critical('End streaming')
+        logging.critical('%s' % str(sys.exc_info()))
+        raise
