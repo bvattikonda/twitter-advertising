@@ -46,6 +46,9 @@ class Listener(StreamListener):
     def on_data(self, data):
         if data.isdigit():
             return True
+        if len(data) == 0:
+            return True
+
         message = json.loads(data)
         if 'warning' in message:
             logging.warning(data)
