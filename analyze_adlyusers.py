@@ -26,7 +26,7 @@ def analyze_users(usersfilename):
     usersfile = open(usersfilename, 'r')
     printed = False
     users = list()
-    User = namedtuple('User', ['user_id', 'followers_count'])
+    User = namedtuple('User', ['user_id', 'screen_name', 'followers_count'])
     locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
     for line in usersfile:
         x = json.loads(line.strip())
@@ -35,6 +35,7 @@ def analyze_users(usersfilename):
             print x['publishers'][0].keys()
         for client_info in x['publishers']:
             users.append(User(client_info['client_id'],\
+                client_info['client_screen_name'],\
                 locale.atoi(client_info['client_followers_count'])))
     return users
 
@@ -43,7 +44,7 @@ def main():
     users = analyze_users(args.users)
     users = sorted(users, key = lambda user: user.followers_count)
     for user in users:
-        print user.user_id
+        print user.user_id, user.screen_name
 
 if __name__ == '__main__':
     main()

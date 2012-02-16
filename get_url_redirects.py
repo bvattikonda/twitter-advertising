@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import sys
 import os
 import time
@@ -9,7 +11,6 @@ import urllib2
 import urlparse
 import httplib
 import argparse
-from multiprocessing import Pool
 from urlredirects import *
 from utils import *
 from datetime import datetime
