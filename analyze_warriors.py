@@ -40,7 +40,8 @@ class WarriorUserParser(HTMLParser):
         if data == 'Twitter':
             self.twitter_table = True
         if self.twitter_account:
-            self.screen_names.add(data)
+            if data.isalnum():
+                self.screen_names.add(data)
             self.twitter_account = False
         return
     def handle_startendtag(self, tag, attrs):
@@ -118,10 +119,17 @@ def analyze_warrior_data(options):
             break
         current_screen_names = new_screen_names[count:count+min(100,\
                                 total - count)]
-        user_info_list = lookup_users(api_info,\
-                                    screen_names =\
-                                    current_screen_names)
-
+        try:
+            user_info_list = lookup_users(api_info,\
+                                        screen_names =\
+                                        current_screen_names)
+        except Exception as e:
+            count = count + 100
+            logging.info(e.message + str(e.code))
+            logging.info(str(current_screen_names))
+            print e.message, e.code
+            continue
+        
         for user_info in user_info_list:
             screen_name = user_info['screen_name'].decode('utf8')
             user_id = user_info['id']

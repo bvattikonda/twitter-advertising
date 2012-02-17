@@ -22,16 +22,16 @@ def print_members(element):
     for item in inspect.getmembers(element):
         print item
 
-def get_users(usersfilename):
+def get_users(data_dir):
     nodename = os.uname()[1]
     id = int(nodename.replace('sysnet', '')) % 3
     user_ids = list()
-    usersfile = open(usersfilename, 'r')
-    for line in usersfile:
-        splitline = line.strip().split('\t')
-        user_id = int(splitline[0])
-        if user_id % 3 == id:
-            user_ids.append(user_id)
+    usersfilenames = os.listdir(data_dir)
+    for userfilename in usersfilenames:
+        if userfilename.endswith('.txt'):
+            user_id = int(userfilename.split('.')[0])
+            if user_id % 3 == id:
+                user_ids.append(user_id)
     return user_ids
 
 def load_user_info(data_dir, user_id):
@@ -99,25 +99,20 @@ def get_user_info(data_dir, api_info, user_id):
 
 def parse_args():
     usage = 'usage: %prog [options]'
-    parser = optparse.OptionParser(description = 'Get details of new\
-        users', usage = usage)
+    parser = optparse.OptionParser(description = 'Update user details',\
+        usage = usage)
     parser.add_option('--data_dir', action = 'store',\
-        help = 'Raw data directory')
+        help = 'Data directory')
     parser.add_option('--authfile', action = 'store',\
         help = 'Authentication details file')
-    parser.add_option('--users', action = 'store',\
-        help = 'File with user information')
     return parser
 
 def correct_options(options):
-    if not options.data_dir or not options.authfile or not\
-        options.users:
+    if not options.data_dir or not options.authfile:
         return False
     if not os.path.exists(options.data_dir):
         return False
     if not os.path.exists(options.authfile):
-        return False
-    if not os.path.exists(options.users):
         return False
     return True
 
@@ -131,17 +126,15 @@ def main():
     api_info = create_api_objects(options.authfile)
 
     # Get users for whom we seek information
-    user_ids = get_users(options.users)
+    user_ids = get_users(options.data_dir)
 
     for user_id in user_ids:
         try:
-            userfilename = os.path.join(options.data_dir,\
-                            str(user_id) + '.txt')
-            if os.path.exists(userfilename):
-                continue
             user_info = get_user_info(options.data_dir, api_info, user_id) 
             if not user_info:
                 continue
+            userfilename = os.path.join(options.data_dir,\
+                            str(user_id) + '.txt')
             userfile = open(userfilename, 'w')
             userfile.write(user_info.getvalue())
             userfile.close()

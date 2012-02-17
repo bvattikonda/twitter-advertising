@@ -16,6 +16,7 @@ from utils import *
 from datetime import datetime
 import inspect
 from threading import Thread
+import threading
 import math
 
 def print_members(element):
@@ -46,19 +47,17 @@ def get_resolved_urls(linksfilename):
         linksfile.close()
     return resolved_urls
 
-def handle_outcome(outcome, success, baseURL, linksfile, contentDir):
+def handle_outcome(outcome, success, baseURL, linksfile):
+    printoutput = None
     if success:
-        linksfile.write(json.dumps(datetime.now(),\
-            default = datehandler) + '\t' +\
-            baseURL + '\t' +\
-            json.dumps(success) + '\t' +\
-            str(outcome.redirects).strip() + '\n')
+        printoutput = str(outcome.redirects).strip()
     else:
-        linksfile.write(json.dumps(datetime.now(),\
-            default = datehandler) + '\t' +\
-            baseURL + '\t' +\
-            json.dumps(success) + '\t' +\
-            str(outcome).strip() + '\n')
+        printoutput = str(outcome).strip()
+    linksfile.write(json.dumps(datetime.now(),\
+        default = datehandler) + '\t' +\
+        baseURL + '\t' +\
+        json.dumps(success) + '\t' +\
+        printoutput + '\n')
 
 def fixURL(baseURL):
     parseresult = urlparse.urlparse(baseURL) 
@@ -104,14 +103,10 @@ def fixURLEncoding(baseURL):
 
 def resolve_redirects(user_id, data_dir):
     # create the file to which links will be saved 
-    print 'Resolving', user_id
     linksfilename = os.path.join(data_dir, str(user_id) + '.links')
     resolved_urls = get_resolved_urls(linksfilename)
     linksfile = open(linksfilename, 'a')
     datafilename = os.path.join(data_dir, str(user_id) + '.txt')
-    contentDir = os.path.join(data_dir, str(user_id))
-    if not os.path.exists(contentDir):
-        os.mkdir(contentDir)
     datafile = open(datafilename, 'r')
     # ignore userinfo, friends and followers
     datafile.readline()
@@ -150,7 +145,7 @@ def resolve_redirects(user_id, data_dir):
             except Exception as e:
                 outcome = str(e)
             try:
-                handle_outcome(outcome, success, baseURL, linksfile, contentDir)
+                handle_outcome(outcome, success, baseURL, linksfile)
             except:
                 pass
             resolved_urls.add(baseURL)
@@ -167,7 +162,9 @@ class ResolveURLThread(Thread):
         self.id = int(nodename.replace('sysnet', '')) % 3
     
     def run(self):
+        count = 0
         for user_id in self.user_ids:
+            count = count + 1
             if user_id % 3 != self.id:
                 continue
             try:
@@ -175,6 +172,9 @@ class ResolveURLThread(Thread):
             except:
                 print sys.exc_info()
                 print >>self.failfile, user_id
+            print 'Resolved %d out of %d' % (count,\
+                len(self.user_ids))
+        sys.exit()
 
 # could return less than n chunks
 def chunks(l, n):
@@ -220,7 +220,8 @@ def main():
         workerThreads.append(workerThread)
 
     while True:
-        time.sleep(1)
+        time.sleep(100)
+        print 'Active threads:', threading.active_count()
         allExited = True
         for workerThread in workerThreads:
             if workerThread.isAlive():
