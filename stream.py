@@ -11,6 +11,7 @@ sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)),\
     'tweepy'))
 from tweepy import *
 from api_functions import *
+from utils import *
 
 class Listener(StreamListener):
     def __init__(self, data_dir, tweets_per_file = 1000, api = None):
@@ -69,10 +70,6 @@ class Listener(StreamListener):
     def on_error(self, status_code):
         print 'error:', status_code
         sys.exit(1)
-
-def total_mins(start, end):
-    td = (end - start)
-    return (td.seconds + td.days * 24 * 3600) / 60.0
 
 def get_args():
     parser = optparse.OptionParser(description = 'Stream data from\

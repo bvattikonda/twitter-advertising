@@ -10,7 +10,7 @@ import urllib
 import urllib2
 import urlparse
 import httplib
-import argparse
+import optparse 
 from urlredirects import *
 from utils import *
 from datetime import datetime
@@ -22,14 +22,15 @@ def print_members(element):
     for item in inspect.getmembers(element):
         print item
 
-def get_args():
-    parser = argparse.ArgumentParser(description = 'Identify\
-        redirects in posts made by users on Twitter ')
-    parser.add_argument('--data_dir', required = True,\
+def parse_args():
+    usage = 'usage: %prog [options]'
+    parser = optparse.OptionParser(description = 'Get redirects',\
+        usage = usage)
+    parser.add_option('--data_dir', action = 'store',\
         help = 'User data files')
-    parser.add_argument('--num_workers', default = 10, type = int,\
+    parser.add_option('--num_workers', default = 10, type = int,\
         help = 'Number of worker processes to spawn')
-    return parser.parse_args()
+    return parser
      
 def get_resolved_urls(linksfilename):
     resolved_urls = set()
@@ -37,35 +38,27 @@ def get_resolved_urls(linksfilename):
         linksfile = open(linksfilename, 'r')
         for line in linksfile:
             splitline = line.strip().split('\t')
-            baseURL = splitline[1]
+            try:
+                baseURL = splitline[1]
+            except IndexError:
+                print line,
             resolved_urls.add(baseURL)
         linksfile.close()
     return resolved_urls
 
 def handle_outcome(outcome, success, baseURL, linksfile, contentDir):
     if success:
-        filecontents = StringIO.StringIO()
-        filecontents.write(outcome.urlhandle.read())
-        filecontents.seek(0)
-        md5 = hashlib.md5()
-        md5.update(filecontents.getvalue())
-        md5sum = md5.hexdigest()
         linksfile.write(json.dumps(datetime.now(),\
             default = datehandler) + '\t' +\
             baseURL + '\t' +\
             json.dumps(success) + '\t' +\
-            str(outcome.redirects) + '\t' + \
-            md5sum + '\n')
-        contentfile = open(os.path.join(contentDir,\
-            md5sum), 'w')
-        contentfile.write(filecontents.getvalue())
-        contentfile.close()
+            str(outcome.redirects).strip() + '\n')
     else:
         linksfile.write(json.dumps(datetime.now(),\
             default = datehandler) + '\t' +\
             baseURL + '\t' +\
             json.dumps(success) + '\t' +\
-            str(outcome) + '\n')
+            str(outcome).strip() + '\n')
 
 def fixURL(baseURL):
     parseresult = urlparse.urlparse(baseURL) 
@@ -170,9 +163,13 @@ class ResolveURLThread(Thread):
         self.data_dir = data_dir
         self.failfile = open(os.path.join(data_dir, self.getName() +\
             '.fail'), 'w')
+        nodename = os.uname()[1]
+        self.id = int(nodename.replace('sysnet', '')) % 3
     
     def run(self):
         for user_id in self.user_ids:
+            if user_id % 3 != self.id:
+                continue
             try:
                 resolve_redirects(user_id, self.data_dir)
             except:
@@ -185,9 +182,21 @@ def chunks(l, n):
     for i in xrange(0, len(l), a):
         yield l[i:i+a]
 
+def correct_options(options):
+    if not options.data_dir:
+        return False
+    if not os.path.exists(options.data_dir):
+        return False
+    return True
+
 def main():
-    args = get_args()
-    filenames = os.listdir(args.data_dir)
+    parser = parse_args()
+    options = parser.parse_args()[0]
+    if not correct_options(options):
+        parser.print_help()
+        return
+
+    filenames = os.listdir(options.data_dir)
     count = 0
     total = len(filenames)
 
@@ -198,12 +207,12 @@ def main():
             user_id = int(filename.split('.')[0])
             user_ids.append(user_id)
 
-    sublist_generator = chunks(user_ids, args.num_workers)
+    sublist_generator = chunks(user_ids, options.num_workers)
     workerThreads = list()
-    for i in xrange(args.num_workers):
+    for i in xrange(options.num_workers):
         try:
             workerThread = ResolveURLThread(sublist_generator.next(),\
-                args.data_dir)
+                options.data_dir)
         except StopIteration:
             break
         workerThread.daemon = True
@@ -211,7 +220,7 @@ def main():
         workerThreads.append(workerThread)
 
     while True:
-        time.sleep(1000)
+        time.sleep(1)
         allExited = True
         for workerThread in workerThreads:
             if workerThread.isAlive():
