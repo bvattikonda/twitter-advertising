@@ -3,7 +3,7 @@
 import sys
 import os
 import time
-import argparse
+import optparse
 import json
 import StringIO
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)),\
@@ -23,10 +23,15 @@ def print_members(element):
         print item
 
 def get_users(usersfilename):
+    nodename = os.uname()[1]
+    id = int(nodename.replace('sysnet', '')) % 3
     user_ids = list()
     usersfile = open(usersfilename, 'r')
     for line in usersfile:
-        user_ids.append(int(line.strip()))
+        splitline = line.strip().split('\t')
+        user_id = int(splitline[0])
+        if user_id % 3 == id:
+            user_ids.append(user_id)
     return user_ids
 
 def load_user_info(data_dir, user_id):
@@ -91,31 +96,50 @@ def get_user_info(data_dir, api_info, user_id):
     for tweet in tweets:
         user_info_buffer.write(json.dumps(tweet) + '\n')
     return user_info_buffer
-    
-def get_args():
-    parser = argparse.ArgumentParser(description = 'Get user details')
-    parser.add_argument('--data_dir', required = True,\
-        help = 'Directory to which the user info files can be stored')
-    parser.add_argument('--authfile', required = True,\
-        help = 'File with all the authentication details of applications')
-    parser.add_argument('--users', required = True,\
-        help = 'File with the users for whom information has to be fetched')
-    return parser.parse_args()
+
+def parse_args():
+    usage = 'usage: %prog [options]'
+    parser = optparse.OptionParser(description = 'Get user details',\
+        usage = usage)
+    parser.add_option('--data_dir', action = 'store',\
+        help = 'Raw data directory')
+    parser.add_option('--authfile', action = 'store',\
+        help = 'Authentication details file')
+    parser.add_option('--users', action = 'store',\
+        help = 'File with user information')
+    return parser
+
+def correct_options(options):
+    if not options.data_dir or not options.authfile or not\
+        options.users:
+        return False
+    if not os.path.exists(options.data_dir):
+        return False
+    if not os.path.exists(options.authfile):
+        return False
+    if not os.path.exists(options.users):
+        return False
+    return True
 
 def main():
-    args = get_args()
-    api_info = create_api_objects(args.authfile)
-    print_remaining_hits(api_info)
+    parser = parse_args()
+    options = parser.parse_args()[0]
+    if not correct_options(options):
+        parser.print_help()
+        return
+
+    api_info = create_api_objects(options.authfile)
 
     # Get users for whom we seek information
-    user_ids = get_users(args.users)
+    user_ids = get_users(options.users)
 
     for user_id in user_ids:
         try:
-            user_info = get_user_info(args.data_dir, api_info, user_id) 
+            user_info = get_user_info(options.data_dir, api_info, user_id) 
             if not user_info:
                 continue
-            userfilename = os.path.join(args.data_dir, str(user_id) + '.txt')
+            userfilename = os.path.join(options.data_dir,\
+                            str(user_id) + '.txt')
             userfile = open(userfilename, 'w')
             userfile.write(user_info.getvalue())
             userfile.close()

@@ -10,6 +10,7 @@ import urllib2
 import urlparse
 import httplib
 import optparse 
+import logging
 from urlredirects import *
 from utils import *
 from datetime import datetime
@@ -68,7 +69,7 @@ def load_fetched_users(data_dir):
     fetched_users = set()
     for line in fetched_usersfile:
         fetched_users.add(line.strip().split()[0])
-    fetched_users_file.close()
+    fetched_usersfile.close()
     return fetched_users
 
 def update_member_locations(data_dir, member_locations):
@@ -83,12 +84,7 @@ def update_member_locations(data_dir, member_locations):
     member_locationsfile.close()
     return old_member_locations | member_locations
     
-def main():
-    parser = parse_args()
-    options = parser.parse_args()[0]
-    if not correct_options(options):
-        parser.print_help()
-
+def fetch_users(options):
     users_fetched = load_fetched_users(options.data_dir)
 
     # connect to warrior forums
@@ -103,14 +99,14 @@ def main():
     f = open(os.path.join(options.data_dir, 'main_' + md5sum), 'w')
     f.write(mainpage)
 
-    # get user pages from the main page
+    # get user page locations from the main page
     parser = WarriorForumParser()
     parser.feed(mainpage)
     member_locations = update_member_locations(options.data_dir, parser.member_locations)
 
     # fetch user page, save and record that the file has been saved
-    fetched_users_file = open(os.path.join(options.data_dir,
-                            'fetched_users.txt'), 'w')
+    fetched_usersfile = open(os.path.join(options.data_dir,
+                            'fetched_users.txt'), 'a')
     for member_location in member_locations:
         parsestring = urlparse.urlparse(member_location)
         member_id = parsestring.path.split('/')[-1]\
@@ -126,8 +122,26 @@ def main():
         member_file.write(page)
         member_file.close()
         users_fetched.add(member_id)
-        fetched_users_file.write(member_id + '\n')
-    fetched_users_file.close()
+        fetched_usersfile.write(member_id + '\n')
+    fetched_usersfile.close()
+
+def main():
+    parser = parse_args()
+    options = parser.parse_args()[0]
+    if not correct_options(options):
+        parser.print_help()
+    logging.basicConfig(filename = os.path.join(options.data_dir,\
+        'warrior.log'),\
+        format = '%(asctime)s - %(levelname)s - %(message)s',\
+        level = logging.DEBUG)
+    while True:
+        logging.info('Begin fetching data')
+        start = datetime.now()
+        fetch_users(options)
+        end = datetime.now()
+        logging.info('Run took %d minutes' % total_mins(start, end))
+        logging.info('End fetching data')
+        time.sleep(3600)
 
 if __name__ == '__main__':
     if already_running(sys.argv[0]):

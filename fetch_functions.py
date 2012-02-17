@@ -18,6 +18,19 @@ def lookup_user(api_info, screen_name = None, user_id = None):
         return user_info_list[0]
     return None
 
+def lookup_users(api_info, screen_names = None, user_ids = None):
+    user_info_list = list()
+    success = False
+    if screen_names:
+        user_info_list, success = block_on_call(api_info, 'lookup_users',\
+            screen_names = screen_names)
+    elif user_ids:
+        user_info_list, success = block_on_call(api_info, 'lookup_users',\
+            user_ids = user_ids)
+    if success:
+        return user_info_list
+    return None
+
 def get_new_user_tweets(api_info,\
     user_id = None,\
     screen_name = None,\
