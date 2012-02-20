@@ -104,6 +104,8 @@ def fixURLEncoding(baseURL):
 def resolve_redirects(user_id, data_dir):
     # create the file to which links will be saved 
     linksfilename = os.path.join(data_dir, str(user_id) + '.links')
+    if os.path.exists(linksfilename):
+        return
     resolved_urls = get_resolved_urls(linksfilename)
     linksfile = open(linksfilename, 'a')
     datafilename = os.path.join(data_dir, str(user_id) + '.txt')
@@ -158,22 +160,17 @@ class ResolveURLThread(Thread):
         self.data_dir = data_dir
         self.failfile = open(os.path.join(data_dir, self.getName() +\
             '.fail'), 'w')
-        nodename = os.uname()[1]
-        self.id = int(nodename.replace('sysnet', '')) % 3
     
     def run(self):
         count = 0
         for user_id in self.user_ids:
             count = count + 1
-            if user_id % 3 != self.id:
-                continue
+            print '%d %d %d' % (user_id, count, len(self.user_ids))
             try:
                 resolve_redirects(user_id, self.data_dir)
             except:
                 print sys.exc_info()
                 print >>self.failfile, user_id
-            print 'Resolved %d out of %d' % (count,\
-                len(self.user_ids))
         sys.exit()
 
 # could return less than n chunks
@@ -189,6 +186,23 @@ def correct_options(options):
         return False
     return True
 
+def get_users(options):
+    data_dir = options.data_dir
+    nodename = os.uname()[1]
+    nodeid = int(nodename.replace('sysnet', '')) % 3
+    user_ids = list()
+    filenames = os.listdir(data_dir)
+    for filename in filenames:
+        if filename.endswith('.txt'):
+            user_id = int(filename.split('.')[0])
+            linksfilename = os.path.join(options.data_dir,\
+                                str(user_id) + '.links')
+            if os.path.exists(linksfilename):
+                continue
+            if user_id % 3 == nodeid:
+                user_ids.append(user_id)
+    return user_ids
+
 def main():
     parser = parse_args()
     options = parser.parse_args()[0]
@@ -196,16 +210,11 @@ def main():
         parser.print_help()
         return
 
+    user_ids = get_users(options)
     filenames = os.listdir(options.data_dir)
-    count = 0
-    total = len(filenames)
 
-    user_ids = list()
-    for filename in filenames:
-        count = count + 1
-        if filename.endswith('.txt'):
-            user_id = int(filename.split('.')[0])
-            user_ids.append(user_id)
+    nodename = os.uname()[1]
+    nodeid = int(nodename.replace('sysnet', '')) % 3
 
     sublist_generator = chunks(user_ids, options.num_workers)
     workerThreads = list()

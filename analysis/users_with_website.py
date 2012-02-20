@@ -6,24 +6,26 @@
 import sys
 import datetime
 import string
-import argparse
+import optparse
 import os
 import json
 import ast
 
-def get_args():
-    parser = argparse.ArgumentParser(description = 'Generate earnings graph')
-    parser.add_argument('--extension', default = '.png',\
+def parse_args():
+    usage = 'usage: %prog [options]'
+    parser = optparse.OptionParser(description = 'Find users who have\
+        a website mentioned in their profile',\
+        usage = usage)
+    parser.add_option('--extension', default = '.png',\
         help = 'File format in which graphs are wanted (eps or png)')
-    parser.add_argument('--users_dir', required = True,\
+    parser.add_option('--data_dir',\
         help = 'Directory which has user data')
-    parser.add_argument('--links_dir', required = True,\
-        help = 'Directory which has links data')
-    return parser.parse_args()
+    return parser
 
 def main():
-    args = get_args()    
-    filenames = os.listdir(args.links_dir)
+    parser = parse_args()
+    options = parser.parse_args()[0]
+    filenames = os.listdir(options.links_dir)
     count = 0
     scammer_count = 0
     for filename in filenames:

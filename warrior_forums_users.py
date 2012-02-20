@@ -137,7 +137,10 @@ def main():
     while True:
         logging.info('Begin fetching data')
         start = datetime.now()
-        fetch_users(options)
+        try:
+            fetch_users(options)
+        except:
+            logging.critical(str(sys.exc_info()))
         end = datetime.now()
         logging.info('Run took %d minutes' % total_mins(start, end))
         logging.info('End fetching data')

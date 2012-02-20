@@ -2,16 +2,19 @@
 
 import sys
 import os
-import argparse
-import simplejson as json
+import optparse
+import json
 from collections import namedtuple
 import locale
 
-def get_args():
-    parser = argparse.ArgumentParser(description = 'Analyze adly users')
-    parser.add_argument('--users', required = True,\
+def parse_args():
+    usage = 'usage: %prog [options]'
+    parser = optparse.OptionParser(description = 'Analyze spntw\
+        users',\
+        usage = usage)
+    parser.add_option('--users',\
         help = 'Text file with all the adly users information')
-    return parser.parse_args()
+    return parser
 
 def analyze_users(usersfilename):
     usersfile = open(usersfilename, 'r')
@@ -21,8 +24,12 @@ def analyze_users(usersfilename):
             print x['screen_name']
 
 def main():
-    args = get_args()
-    analyze_users(args.users)
+    parser = parse_args()
+    options = parser.parse_args()[0]
+    if not options.users:
+        parser.print_help()
+        return
+    analyze_users(options.users)
 
 if __name__ == '__main__':
     main()

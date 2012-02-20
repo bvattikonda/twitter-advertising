@@ -6,6 +6,7 @@ import time
 import optparse
 import json
 import StringIO
+import logging
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)),\
     'tweepy'))
 from tweepy import *
@@ -22,6 +23,7 @@ def print_members(element):
     for item in inspect.getmembers(element):
         print item
 
+# Return the users who have been fetched in the past
 def get_users(data_dir):
     nodename = os.uname()[1]
     id = int(nodename.replace('sysnet', '')) % 3
@@ -62,18 +64,21 @@ def get_user_info(data_dir, api_info, user_id):
         
         # if failed to fetch, return
         if not user_info:
+            logging.warning('User lookup failed %d' % (user_id))
             raise Exception('User lookup failed %d' % (user_id))
     
+        logging.info(user_info['screen_name'])
         print user_info['screen_name']
         user_info_buffer.write(json.dumps(user_info) + '\n')
     
         followers, friends = user_connections(api_info, user_id = user_id)
         if followers == None or friends == None:
+            logging.warning('User connections lookup failed %d' % (user_id))
             raise Exception('User connections lookup failed %d' % (user_id))
         user_info_buffer.write(json.dumps(followers) + '\n')
         user_info_buffer.write(json.dumps(friends) + '\n')
     else:
-        print 'Information found for %d' % (user_id)
+        logging.info('Information found for %d' % (user_id))
         line = user_infofile.readline()
         last_line = line
         if len(line) > 0:
@@ -87,12 +92,13 @@ def get_user_info(data_dir, api_info, user_id):
 
     # get the latest user information and dump to pickle file
     if tweetsFound:
-        print 'Tweets found for %d' % (user_id)
+        logging.info('Tweets found for %d' % (user_id))
         tweets = get_new_user_tweets(api_info, user_id = user_id,
             since_id = last_tweet['id'])
     else:
         tweets = get_user_tweets(api_info, user_id = user_id)
 
+    logging.info('%d tweets found for %d' % (len(tweets), user_id))
     for tweet in tweets:
         user_info_buffer.write(json.dumps(tweet) + '\n')
     return user_info_buffer
@@ -116,17 +122,10 @@ def correct_options(options):
         return False
     return True
 
-def main():
-    parser = parse_args()
-    options = parser.parse_args()[0]
-    if not correct_options(options):
-        parser.print_help()
-        return
-
-    api_info = create_api_objects(options.authfile)
-
+def update_userinfo(api_info, options):
     # Get users for whom we seek information
     user_ids = get_users(options.data_dir)
+    logging.info('Updating info for %d users' % len(user_ids))
 
     for user_id in user_ids:
         try:
@@ -140,6 +139,24 @@ def main():
             userfile.close()
         except:
             print 'FATAL:', user_id, sys.exc_info()
+
+def main():
+    parser = parse_args()
+    options = parser.parse_args()[0]
+    if not correct_options(options):
+        parser.print_help()
+        return
+
+    api_info = create_api_objects(options.authfile)
+    logging.basicConfig(filename = os.path.join(options.data_dir,\
+        'update_streams_%s.log' % os.uname()[1]),\
+        format = '%(asctime)s - %(levelname)s - %(message)s',\
+        level = logging.DEBUG)
+
+    while True:
+        logging.info('Begin updating info')
+        update_userinfo(api_info, options)
+        logging.info('End updating info')
 
 if __name__ == '__main__':
     main()
