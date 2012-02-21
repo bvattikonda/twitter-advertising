@@ -3,7 +3,7 @@
 import sys
 import os
 import optparse
-import simplejson as json
+import json
 from collections import namedtuple
 import locale
 
