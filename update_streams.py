@@ -91,11 +91,12 @@ def get_user_info(data_dir, api_info, user_id):
         if len(line) > 0:
             tweetsFound = True
 
-        while len(line) > 0:
-            user_info_buffer.write(line)
-            last_line = line
-            line = user_infofile.readline()
-        last_tweet = json.loads(last_line)
+        if tweetsFound:
+            while len(line) > 0:
+                user_info_buffer.write(line)
+                last_line = line
+                line = user_infofile.readline()
+            last_tweet = json.loads(last_line)
 
     # get the latest user information and dump to pickle file
     if tweetsFound:
