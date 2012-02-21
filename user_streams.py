@@ -88,11 +88,12 @@ def get_user_info(data_dir, api_info, user_id):
         if len(line) > 0:
             tweetsFound = True
 
-        while len(line) > 0:
-            user_info_buffer.write(line)
-            last_line = line
-            line = user_infofile.readline()
-        last_tweet = json.loads(last_line)
+        if tweetsFound:
+            while len(line) > 0:
+                user_info_buffer.write(line)
+                last_line = line
+                line = user_infofile.readline()
+            last_tweet = json.loads(last_line)
 
     # get the latest user information and dump to pickle file
     if tweetsFound:
@@ -146,6 +147,9 @@ def fetch_userinfo(api_info, options):
             userfile = open(userfilename, 'w')
             userfile.write(user_info.getvalue())
             userfile.close()
+        except KeyboardInterrupt:
+            logging.warning('KeyboardInterrupt, exiting')
+            raise    
         except:
             print 'FATAL:', user_id, sys.exc_info()
 
@@ -165,8 +169,12 @@ def main():
 
     while True:
         logging.info('Begin fetching info')
+        start = time.time()
         fetch_userinfo(api_info, options)
+        end = time.time()
         logging.info('End fetching info')
+        if (end - start) < 600:
+            time.sleep(600)
 
 if __name__ == '__main__':
     main()
