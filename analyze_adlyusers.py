@@ -2,7 +2,7 @@
 
 import sys
 import os
-import argparse
+import optparse
 import simplejson as json
 from collections import namedtuple
 import locale
@@ -16,11 +16,12 @@ import locale
 'client_followers_count', 'proposed_price', 'publisher_earns', 'on_adly']
 '''
 
-def get_args():
-    parser = argparse.ArgumentParser(description = 'Analyze adly users')
-    parser.add_argument('--users', required = True,\
-        help = 'Text file with all the adly users information')
-    return parser.parse_args()
+def parse_args():
+    usage = 'usage: %prog [options]'
+    parser = optparse.OptionParser(description = 'Analyze adly\
+                users', usage = usage)
+    parser.add_option('--users', help = 'Adly raw data')
+    return parser
 
 def analyze_users(usersfilename):
     usersfile = open(usersfilename, 'r')
@@ -39,12 +40,25 @@ def analyze_users(usersfilename):
                 locale.atoi(client_info['client_followers_count'])))
     return users
 
+def correct_options(options):
+    if not options.users:
+        return False
+    if not os.path.exists(options.users):
+        return False
+
+    return True
+
 def main():
-    args = get_args()
-    users = analyze_users(args.users)
+    parser = parse_args()
+    options = parser.parse_args()[0]
+    if not correct_options(options):
+        parser.print_help()
+        return
+
+    users = analyze_users(options.users)
     users = sorted(users, key = lambda user: user.followers_count)
     for user in users:
-        print user.user_id, user.screen_name
+        print '%d\t%s' % (user.user_id, user.screen_name)
 
 if __name__ == '__main__':
     main()

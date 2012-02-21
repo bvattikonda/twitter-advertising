@@ -5,5 +5,6 @@ data
 graphs
 scratch
 guess
+plotting/summary
 *.swp
 .*

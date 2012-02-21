@@ -12,14 +12,7 @@ import os
 import time
 import json
 import ast
-
-def get_args():
-    parser = argparse.ArgumentParser(description = 'Generate earnings graph')
-    parser.add_argument('--extension', default = '.png',\
-        help = 'File format in which graphs are wanted (eps or png)')
-    parser.add_argument('--links_dir', required = True,\
-        help = 'Directory which has links data')
-    return parser.parse_args()
+from analysis import *
 
 def get_domain(url):
     parseresult = urlparse(url)
@@ -52,6 +45,11 @@ def get_plot_data(links_dir):
     return plot_data
 
 def main():
+    parser = parse_args()
+    options = parser.parse_args()[0]
+    if not correct_options(options):
+        parser.print_help()
+        return
     args = get_args()    
     plot_data = get_plot_data(args.links_dir)
     print len(plot_data)
