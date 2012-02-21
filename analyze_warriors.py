@@ -4,6 +4,7 @@ import sys
 import os
 import optparse
 import string
+import time
 import json
 from collections import namedtuple
 from datetime import datetime
@@ -158,10 +159,10 @@ def main():
         level = logging.DEBUG)
     while True:
         logging.info('Begin analyzing data')
-        start = datetime.now()
+        start = time.time()
         analyze_warrior_data(options)
-        end = datetime.now()
-        logging.info('Run took %d minutes' % total_mins(start, end))
+        end = time.time()
+        logging.info('Run took %d minutes' % ((end - start) / 60))
         logging.info('End fetching data')
     
 if __name__ == '__main__':

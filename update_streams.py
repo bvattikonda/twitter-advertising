@@ -30,6 +30,13 @@ def get_users(data_dir):
     user_ids = list()
     usersfilenames = os.listdir(data_dir)
     for userfilename in usersfilenames:
+        lastmodified = os.stat(os.path.join(data_dir,\
+                        userfilename)).st_mtime
+
+        # only users who have not been updated in 12 hours
+        if (lastmodified - time.time()) / 3600 < 12:
+            continue
+
         if userfilename.endswith('.txt'):
             user_id = int(userfilename.split('.')[0])
             if user_id % 3 == id:
@@ -137,6 +144,9 @@ def update_userinfo(api_info, options):
             userfile = open(userfilename, 'w')
             userfile.write(user_info.getvalue())
             userfile.close()
+        except KeyboardInterrupt:
+            logging.warning('KeyboardInterrupt, exiting')
+            raise    
         except:
             print 'FATAL:', user_id, sys.exc_info()
 
@@ -155,8 +165,12 @@ def main():
 
     while True:
         logging.info('Begin updating info')
+        start = time.time()
         update_userinfo(api_info, options)
+        end = time.time()
         logging.info('End updating info')
+        if (end - start) < 600:
+            time.sleep(600)
 
 if __name__ == '__main__':
     main()

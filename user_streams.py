@@ -146,6 +146,9 @@ def fetch_userinfo(api_info, options):
             userfile = open(userfilename, 'w')
             userfile.write(user_info.getvalue())
             userfile.close()
+        except KeyboardInterrupt:
+            logging.warning('KeyboardInterrupt, exiting')
+            raise    
         except:
             print 'FATAL:', user_id, sys.exc_info()
 
@@ -165,8 +168,12 @@ def main():
 
     while True:
         logging.info('Begin fetching info')
+        start = time.time()
         fetch_userinfo(api_info, options)
+        end = time.time()
         logging.info('End fetching info')
+        if (end - start) < 600:
+            time.sleep(600)
 
 if __name__ == '__main__':
     main()
