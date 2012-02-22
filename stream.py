@@ -71,17 +71,30 @@ class Listener(StreamListener):
         print 'error:', status_code
         sys.exit(1)
 
-def get_args():
+def parse_args():
     parser = optparse.OptionParser(description = 'Stream data from\
         Twitter')
     parser.add_option('--data_dir', action = 'store',\
         help = 'Directory to which the stream data has to be saved')
     parser.add_option('--authfile', action = 'store',\
         help = 'File with all the authentication details of applications')
-    return parser.parse_args()[0]
+    return parser
+
+def correct_options(options):
+    if not options.data_dir or not options.authfile:
+        return False
+    if not os.path.exists(options.data_dir):
+        return False
+    if not os.path.exists(options.authfile):
+        return False
+    return True
 
 def main():
-    options = get_args()
+    parser = parse_args()
+    options = parser.parse_args()[0]
+    if not correct_options(options):
+        parser.print_help()
+        return
     api_info = create_api_objects(options.authfile)
     logging.basicConfig(filename = os.path.join(options.data_dir,\
         'stream.log'),\
