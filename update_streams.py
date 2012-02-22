@@ -34,7 +34,7 @@ def get_users(data_dir):
                         userfilename)).st_mtime
 
         # only users who have not been updated in 12 hours
-        if (lastmodified - time.time()) / 3600 < 12:
+        if (time.time() - lastmodified ) / 3600 < 12:
             continue
 
         if userfilename.endswith('.txt'):
