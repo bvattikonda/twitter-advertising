@@ -14,6 +14,7 @@ import matplotlib.font_manager as fm
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.ticker import ScalarFormatter
+from collections import defaultdict
 from graph_functions import *
 from plot_engine import *
 
@@ -25,11 +26,12 @@ matplotlib.rcParams['axes.labelsize'] = 10
 matplotlib.rcParams['xtick.labelsize'] = 10
 matplotlib.rcParams['ytick.labelsize'] = 10
 
-LEGEND_PROP = matplotlib.font_manager.FontProperties(size=9)
+LEGEND_PROP = matplotlib.font_manager.FontProperties(size=7)
 TITLE_PROP = matplotlib.font_manager.FontProperties(size=9)
 LABEL_PROP = matplotlib.font_manager.FontProperties(size=9)
-MARKERS = ['b-+', 'g-x', 'c-s', 'm-^', 'y->', 'r-p']
-MARKEVERY = 10 
+COLORS = ['b', 'g', 'c', 'm', 'y', 'r']
+MARKERS = ['+', 'x', 's', '^', '>', 'p']
+MARKEVERY = 100
 
 # Can be used to adjust the border and spacing of the figure
 fig_left = 0.15
@@ -70,19 +72,35 @@ def get_args():
 def main():
     args = get_args()    
     fig = create_figure()
-    plot_data = list()
+    plot_data = defaultdict(list)
+    all_data = list()
     for line in open(args.datafile, 'r'):
-        plot_data.append(float(line))
-    print len(plot_data)
+        key, value = line.strip().split('\t')
+        plot_data[key].append(int(value))
+        all_data.append(int(value))
+    print len(all_data)
     subplot = fig.add_subplot(1, 1, 1)
-    plot_cdf(subplot, plot_data)
-    subplot.set_xlabel('Fraction of Time', fontproperties = LABEL_PROP)
+    count = 0
+    for key in plot_data:
+        plot_cdf(subplot, plot_data[key],\
+            color = COLORS[count],\
+            marker = MARKERS[count],\
+            markevery = MARKEVERY,\
+            label = key)
+        count += 1 
+    plot_cdf(subplot, all_data,\
+        color = 'k',\
+        marker = '*',\
+        label = 'All',\
+        markevery = MARKEVERY)
+    subplot.set_xlabel('Number of followers', fontproperties = LABEL_PROP)
     subplot.set_ylabel('CDF', fontproperties = LABEL_PROP)
-    subplot.set_title('Fraction of Time', fontproperties = TITLE_PROP) 
+    subplot.set_title('Number of followers', fontproperties = TITLE_PROP) 
+    subplot.legend(prop = LEGEND_PROP, loc = (0.8, 0.2))
     subplot.set_ylim(0, 1)
-    subplot.set_xlim(0, 1)
+    subplot.set_xlim(0, 4000)
     print_figure(fig, args.destination_dir,\
-        'fraction_of_time', args.extension)
+        'followers', args.extension)
 
 if __name__ == '__main__':
     main()

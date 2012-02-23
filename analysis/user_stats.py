@@ -1,6 +1,6 @@
 #!/usr/bin/env python 
 
-# Given different user statistics
+# Different user statistics
 
 import sys
 import os
