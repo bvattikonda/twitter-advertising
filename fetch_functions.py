@@ -41,7 +41,6 @@ def get_new_user_tweets(api_info,\
 
     current_since_id = since_id
     while True:
-        print '\t', len(new_tweets)
         if screen_name:
             tweets, success = block_on_call(api_info, 'user_timeline',\
                 screen_name = screen_name,\
@@ -92,7 +91,6 @@ def get_user_tweets(api_info, user_id = None, screen_name = None):
         return all_tweets
 
     while True:
-        print '\t', user_id, len(all_tweets)
         tweets, success = block_on_call(api_info, 'user_timeline',\
             id = user_id,\
             count = 200,\
@@ -112,12 +110,22 @@ def user_connections(api_info, user_id = None, screen_name = None, max_followers
     cursor = -1
     followers = list()
     while True:
-        if screen_name:
-            output, success = block_on_call(api_info, 'followers_ids',\
-                                            screen_name = screen_name, cursor = cursor)
-        elif user_id:
-            output, success = block_on_call(api_info, 'followers_ids',\
-                                            user_id = user_id, cursor = cursor)
+        try:
+            if screen_name:
+                output, success = block_on_call(api_info,\
+                    'followers_ids',\
+                    screen_name = screen_name,\
+                    cursor = cursor)
+            elif user_id:
+                output, success = block_on_call(api_info,\
+                    'followers_ids',\
+                    user_id = user_id,\
+                    cursor = cursor)
+        except error.TweepError as e:
+            if e.reason == 'Not authorized':
+                return None, None
+            raise
+            
         if isinstance(output, tuple):
             followers += output[0]['ids']
             cursor = output[1][1]
@@ -133,12 +141,21 @@ def user_connections(api_info, user_id = None, screen_name = None, max_followers
     cursor = -1
     friends = list()
     while True:
-        if screen_name:
-            output, success = block_on_call(api_info, 'friends_ids',\
-                                            screen_name = screen_name, cursor = cursor)
-        elif user_id:
-            output, success = block_on_call(api_info, 'friends_ids',\
-                                            user_id = user_id, cursor = cursor)
+        try:
+            if screen_name:
+                output, success = block_on_call(api_info,\
+                    'friends_ids',\
+                    screen_name = screen_name,\
+                    cursor = cursor)
+            elif user_id:
+                output, success = block_on_call(api_info,\
+                    'friends_ids',\
+                    user_id = user_id,\
+                    cursor = cursor)
+        except error.TweepError as e:
+            if e.reason == 'Not authorized':
+                return None, None
+            raise
         if isinstance(output, tuple):
             friends += output[0]['ids']
             cursor = output[1][1]

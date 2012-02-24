@@ -6,6 +6,7 @@ import time
 import optparse
 import json
 import StringIO
+import logging
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)),\
     'tweepy'))
 from tweepy import *
@@ -22,14 +23,19 @@ def print_members(element):
     for item in inspect.getmembers(element):
         print item
 
-def get_users(usersfilename):
+# Only the new users who have not been fetched in the past
+def get_users(options):
     nodename = os.uname()[1]
     id = int(nodename.replace('sysnet', '')) % 3
     user_ids = list()
-    usersfile = open(usersfilename, 'r')
+    usersfile = open(options.users, 'r')
     for line in usersfile:
         splitline = line.strip().split('\t')
         user_id = int(splitline[0])
+        userfilename = os.path.join(options.data_dir,\
+                        str(user_id) + '.txt')
+        if os.path.exists(userfilename):
+            continue
         if user_id % 3 == id:
             user_ids.append(user_id)
     return user_ids
@@ -62,37 +68,42 @@ def get_user_info(data_dir, api_info, user_id):
         
         # if failed to fetch, return
         if not user_info:
+            logging.warning('User lookup failed %d' % (user_id))
             raise Exception('User lookup failed %d' % (user_id))
     
+        logging.info(user_info['screen_name'])
         print user_info['screen_name']
         user_info_buffer.write(json.dumps(user_info) + '\n')
     
         followers, friends = user_connections(api_info, user_id = user_id)
         if followers == None or friends == None:
+            logging.warning('User connections lookup failed %d' % (user_id))
             raise Exception('User connections lookup failed %d' % (user_id))
         user_info_buffer.write(json.dumps(followers) + '\n')
         user_info_buffer.write(json.dumps(friends) + '\n')
     else:
-        print 'Information found for %d' % (user_id)
+        logging.info('Information found for %d' % (user_id))
         line = user_infofile.readline()
         last_line = line
         if len(line) > 0:
             tweetsFound = True
 
-        while len(line) > 0:
-            user_info_buffer.write(line)
-            last_line = line
-            line = user_infofile.readline()
-        last_tweet = json.loads(last_line)
+        if tweetsFound:
+            while len(line) > 0:
+                user_info_buffer.write(line)
+                last_line = line
+                line = user_infofile.readline()
+            last_tweet = json.loads(last_line)
 
     # get the latest user information and dump to pickle file
     if tweetsFound:
-        print 'Tweets found for %d' % (user_id)
+        logging.info('Tweets found for %d' % (user_id))
         tweets = get_new_user_tweets(api_info, user_id = user_id,
             since_id = last_tweet['id'])
     else:
         tweets = get_user_tweets(api_info, user_id = user_id)
 
+    logging.info('%d tweets found for %d' % (len(tweets), user_id))
     for tweet in tweets:
         user_info_buffer.write(json.dumps(tweet) + '\n')
     return user_info_buffer
@@ -121,6 +132,28 @@ def correct_options(options):
         return False
     return True
 
+def fetch_userinfo(api_info, options):
+    # Get users for whom we seek information
+    user_ids = get_users(options)
+
+    logging.info('Fetching info for %d users' % len(user_ids))
+    for user_id in user_ids:
+        try:
+            user_info = get_user_info(options.data_dir, api_info, user_id) 
+            if not user_info:
+                continue
+            userfilename = os.path.join(options.data_dir,\
+                            str(user_id) + '.txt')
+            userfile = open(userfilename, 'w')
+            userfile.write(user_info.getvalue())
+            userfile.close()
+        except KeyboardInterrupt:
+            logging.warning('KeyboardInterrupt, exiting')
+            raise    
+        except:
+            print 'FATAL:', user_id, sys.exc_info()
+
+   
 def main():
     parser = parse_args()
     options = parser.parse_args()[0]
@@ -129,24 +162,19 @@ def main():
         return
 
     api_info = create_api_objects(options.authfile)
+    logging.basicConfig(filename = os.path.join(options.data_dir,\
+        'user_streams_%s.log' % os.uname()[1]),\
+        format = '%(asctime)s - %(levelname)s - %(message)s',\
+        level = logging.DEBUG)
 
-    # Get users for whom we seek information
-    user_ids = get_users(options.users)
-
-    for user_id in user_ids:
-        try:
-            userfilename = os.path.join(options.data_dir,\
-                            str(user_id) + '.txt')
-            if os.path.exists(userfilename):
-                continue
-            user_info = get_user_info(options.data_dir, api_info, user_id) 
-            if not user_info:
-                continue
-            userfile = open(userfilename, 'w')
-            userfile.write(user_info.getvalue())
-            userfile.close()
-        except:
-            print 'FATAL:', user_id, sys.exc_info()
+    while True:
+        logging.info('Begin fetching info')
+        start = time.time()
+        fetch_userinfo(api_info, options)
+        end = time.time()
+        logging.info('End fetching info')
+        if (end - start) < 600:
+            time.sleep(600)
 
 if __name__ == '__main__':
     main()

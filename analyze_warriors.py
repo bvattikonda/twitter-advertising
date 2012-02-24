@@ -4,6 +4,7 @@ import sys
 import os
 import optparse
 import string
+import time
 import json
 from collections import namedtuple
 from datetime import datetime
@@ -114,6 +115,7 @@ def analyze_warrior_data(options):
     outfile = open(os.path.join(options.data_dir, 'users.txt'), 'a')
     total = len(new_screen_names)
     count = 0
+    logging.info('Fetching information of %d users' % total)
     while True:
         if count >= total:
             break
@@ -125,11 +127,12 @@ def analyze_warrior_data(options):
                                         current_screen_names)
         except Exception as e:
             count = count + 100
-            logging.info(e.message + str(e.code))
+            logging.info(str(e))
             logging.info(str(current_screen_names))
-            print e.message, e.code
+            print e
             continue
-        
+        logging.info('Resolved %d of %d' %\
+            (len(user_info_list), total))        
         for user_info in user_info_list:
             screen_name = user_info['screen_name'].decode('utf8')
             user_id = user_info['id']
@@ -141,7 +144,6 @@ def analyze_warrior_data(options):
                 user_details[screen_name.lower()].warrior_id +\
                 '\n')
         count = count + 100
-        print 'Resolved', count
 
     outfile.close()
 
@@ -157,10 +159,10 @@ def main():
         level = logging.DEBUG)
     while True:
         logging.info('Begin analyzing data')
-        start = datetime.now()
+        start = time.time()
         analyze_warrior_data(options)
-        end = datetime.now()
-        logging.info('Run took %d minutes' % total_mins(start, end))
+        end = time.time()
+        logging.info('Run took %d minutes' % ((end - start) / 60))
         logging.info('End fetching data')
     
 if __name__ == '__main__':
