@@ -37,13 +37,6 @@ def main():
     else:
         userinfo = lookup_user(api_info, screen_name = options.user)
     print userinfo
-    if options.user.isdigit():
-        followers, friends = user_connections(api_info,\
-                                user_id = int(options.user))
-    else:
-        followers, friends = user_connections(api_info,\
-                                screen_name = options.user)
-    print followers, friends
-
+    
 if __name__ == '__main__':
     main()
