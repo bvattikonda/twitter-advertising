@@ -104,6 +104,9 @@ class Stream(object):
                 else:
                     conn = httplib.HTTPSConnection(self.host)
                 self.auth.apply_auth(url, 'POST', self.headers, self.parameters)
+                print self.headers, self.parameters
+                print self.url, self.body
+                sys.exit(1)
                 conn.connect()
                 conn.sock.settimeout(self.timeout)
                 conn.request('POST', self.url, self.body, headers=self.headers)
