@@ -63,6 +63,6 @@ class TwitterStreamListener(TwitterStreamerFactory):
         ''' Called when connection is made with Twitter '''
         return
 
-    def connectionLost(self):
+    def connectionLost(self, reason):
         ''' Called when connection with Twitter is lost '''
         return

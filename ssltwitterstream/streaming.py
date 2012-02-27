@@ -65,7 +65,7 @@ class TwitterStreamerFactory(ReconnectingClientFactory):
             self.stopTrying()
             self.stopFactory()
 
-    def badStatus(version, status, message):
+    def badStatus(self, version, status, message):
         self.initialDelay = 10
         self.maxDelay = 240
         self.factory = 2
