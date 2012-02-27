@@ -9,20 +9,27 @@ import optparse
 from utils import *
 
 class Listener(TwitterStreamListener):
-    def __init__(self, data_dir, tweets_per_file = 10000):
+    def __init__(self, data_dir):
         self.parser = JSONParser()
-        self.tweets_per_file = tweets_per_file
-        # written to files and closed
-        self.saved = 0
+        self.tweets_per_file = 100000
         # written to files but not closed
         self.unsaved = 0
         self.data_dir = data_dir 
-        self.current_file = open(os.path.join(self.data_dir,\
-            'sample' + '_' + str(self.saved) + '_' +\
-            str(self.saved + self.tweets_per_file) + '.tweets'), 'w')
         self.start_time = time.time()
         self.local_start = self.start_time
         self.max_rate = 0
+        # written to files and closed
+        self.saved = 0
+        filenames = os.listdir(data_dir)
+        for filename in filenames:
+            if filename.endswith('.tweets') and\
+                filename.startswith('sample_'):
+                splitname = filename.replace('.tweets', '').split('_')
+                if self.saved < int(splitname[2]):
+                    self.saved = int(splitname[2])
+        self.current_file = open(os.path.join(self.data_dir,\
+            'sample' + '_' + str(self.saved) + '_' +\
+            str(self.saved + self.tweets_per_file) + '.tweets'), 'w')
 
     def print_rate(self):
         current_time = time.time()

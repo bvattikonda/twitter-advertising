@@ -28,6 +28,7 @@ class TwitterStreamer(http.HTTPClient):
         self.sendHeader('Authorization', self.factory.oauth_header)
         self.endHeaders()
         self.factory.connectionMade()
+        self.transport.setTcpKeepAlive(True)
   
     def handleStatus(self, version, status, message):
         if status != '200':
