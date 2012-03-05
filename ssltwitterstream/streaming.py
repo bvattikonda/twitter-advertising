@@ -40,8 +40,6 @@ class TwitterStreamer(http.HTTPClient):
         self.transport.setTcpKeepAlive(True)
         self.factory.connectionMade()
         self.statusLineReceived = False
-
-        self.count = 0
   
     def handleStatus(self, version, status, message):
         if status != 200:
@@ -53,10 +51,6 @@ class TwitterStreamer(http.HTTPClient):
             version, status, message = line.split(' ', 2)
             self.handleStatus(version, int(status), message)
         self.factory.lineReceived(line)
-        self.count += 1
-        if self.count == 500:
-            self.transport.loseConnection()
-            time.sleep(1000)
 
 class CtxFactory(ClientContextFactory):
     def getContext(self):
