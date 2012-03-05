@@ -5,17 +5,30 @@ import urlparse, time, webbrowser
 from twisted.internet.protocol import ReconnectingClientFactory
 from twisted.internet.ssl import ClientContextFactory
 from twisted.web import http
+import time
 
 TWITTER_STREAM_API_HOST = 'stream.twitter.com'
 
 class TwitterStreamer(http.HTTPClient):
+    def build_oauth_header(self):
+        oauth_header =\
+                      self.factory.auth.build_authorization_header(\
+                      self.factory.url,\
+                      self.factory.method,\
+                      self.factory.parameters)
+        return oauth_header
+
+    def sendHeaders(self):
+        oauth_header = self.build_oauth_header()
+        self.factory.log(self.factory.host)
+        self.factory.log(self.factory.agent)
+        self.factory.log(oauth_header)
+        self.sendHeader('Host', self.factory.host)
+        self.sendHeader('User-Agent', self.factory.agent)
+        self.sendHeader('Authorization', oauth_header)
+        self.endHeaders()
+
     def connectionMade(self):
-        x = urlparse.urlunparse((None,
-                None,
-                self.factory.path,
-                None,
-                self.factory.query,
-                None))
         self.sendCommand(self.factory.method,
             urlparse.urlunparse((None,
                 None,
@@ -23,22 +36,27 @@ class TwitterStreamer(http.HTTPClient):
                 None,
                 self.factory.query,
                 None)))
-        self.factory.log(self.factory.host)
-        self.factory.log(self.factory.agent)
-        self.factory.log(self.factory.oauth_header)
-        self.sendHeader('Host', self.factory.host)
-        self.sendHeader('User-Agent', self.factory.agent)
-        self.sendHeader('Authorization', self.factory.oauth_header)
-        self.endHeaders()
-        self.factory.connectionMade()
+        self.sendHeaders()
         self.transport.setTcpKeepAlive(True)
+        self.factory.connectionMade()
+        self.statusLineReceived = False
+
+        self.count = 0
   
     def handleStatus(self, version, status, message):
-        if status != '200':
-            self.factory.badStatus(version, status, message)
+        if status != 200:
+            self.factor.badStatus(version, status, message)
   
     def lineReceived(self, line):
+        if not self.statusLineReceived:
+            self.statusLineReceived = True
+            version, status, message = line.split(' ', 2)
+            self.handleStatus(version, int(status), message)
         self.factory.lineReceived(line)
+        self.count += 1
+        if self.count == 500:
+            self.transport.loseConnection()
+            time.sleep(1000)
 
 class CtxFactory(ClientContextFactory):
     def getContext(self):
@@ -49,17 +67,29 @@ class CtxFactory(ClientContextFactory):
 class TwitterStreamerFactory(ReconnectingClientFactory):
     protocol = TwitterStreamer
 
-    def __init__(self, listener, method, path, query, oauth_header):
+    def __init__(self, listener, scheme, method, path, query,
+        parameters, host, auth):
         self.listener = listener
+        self.scheme = scheme
         self.method = method
         self.path = path
         self.query = query
+        self.parameters = parameters
+        self.host = host
+        self.auth = auth 
         self.agent='Twisted/TwitterStreamer'
-        self.host = TWITTER_STREAM_API_HOST
-        self.oauth_header = oauth_header
+        self.url = urlparse.urlunparse((self.scheme,
+                    self.host,
+                    self.path,
+                    None,
+                    self.query,
+                    None))
     
     def buildProtocol(self, addr):
         self.resetDelay()
+        self.initialDelay = 1
+        self.maxDelay = 16
+        self.factor = 2
         proto = ReconnectingClientFactory.buildProtocol\
                     (self, addr)
         return proto
@@ -72,9 +102,9 @@ class TwitterStreamerFactory(ReconnectingClientFactory):
     def badStatus(self, version, status, message):
         self.initialDelay = 10
         self.maxDelay = 240
-        self.factory = 2
-        self.listener.log('HTTP ERROR: %s: %s: %s' % (str(version),\
-                    str(status), str(message)))
+        self.factor = 2
+        self.listener.log('HTTP ERROR: %s: %d: %s' % (version,\
+                    status, message))
 
     def connectionMade(self):
         self.listener.connectionMade()
@@ -82,10 +112,6 @@ class TwitterStreamerFactory(ReconnectingClientFactory):
     def clientConnectionLost(self, connector, unused_reason):
         self.listener.connectionLost('clientConnectionLost: %s' %
             (str(unused_reason)))
-        if self.maxDelay != 240:
-            self.initialDelay = 1
-            self.maxDelay = 16
-            self.factor = 2
         ReconnectingClientFactory.clientConnectionLost(self,
             connector, unused_reason)
 
@@ -103,27 +129,21 @@ class Stream(object):
         self.auth = auth
         self.listener = listener
         self.scheme = 'https'
-        self.host = TWITTER_STREAM_API_HOST
         self.path = ''
         self.query = ''
         self.method = 'GET'
         self.parameters = {}
+        self.host = TWITTER_STREAM_API_HOST
     
     def _start(self):
-        url = urlparse.urlunparse((self.scheme,
-            self.host, 
-            self.path,
-            None,
-            self.query,
-            None))
-        auth_header = self.auth.build_authorization_header(url,
-                        self.method,
-                        self.parameters)
         twsf = TwitterStreamerFactory(self.listener,
+                self.scheme,
                 self.method,
                 self.path,
                 self.query,
-                auth_header)
+                self.parameters,
+                self.host,
+                self.auth)
         from twisted.internet import reactor
         reactor.connectSSL(self.host, 443, twsf, CtxFactory())
         reactor.run()
