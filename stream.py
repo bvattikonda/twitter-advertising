@@ -20,21 +20,22 @@ class Listener(TwitterStreamListener):
         self.local_start = self.start_time
         self.max_rate = 0
         # written to files and closed
-        self.saved = 0
         filenames = os.listdir(data_dir)
+        self.already = 0
         for filename in filenames:
             if filename.endswith('.tweets') and\
                 filename.startswith('sample_'):
                 splitname = filename.replace('.tweets', '').split('_')
-                if self.saved < int(splitname[2]):
-                    self.saved = int(splitname[2])
+                if self.already < int(splitname[2]):
+                    self.already = int(splitname[2])
+        self.saved = self.already
         self.current_file = open(os.path.join(self.data_dir,\
             'sample' + '_' + str(self.saved) + '_' +\
             str(self.saved + self.tweets_per_file) + '.tweets'), 'w')
 
     def print_rate(self):
         current_time = time.time()
-        global_rate = self.saved /\
+        global_rate = (self.saved - self.already) /\
                         (current_time - self.start_time) 
         local_rate = self.tweets_per_file /\
                         (current_time - self.local_start)
