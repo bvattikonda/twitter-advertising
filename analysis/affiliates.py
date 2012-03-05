@@ -13,16 +13,6 @@ from urlparse import urlparse
 from analysis import *
 
 def affiliate_domain(domain):
-    if domain == 'www.amzn.to':
-        return True
-    if domain == 'amzn.to':
-        return True
-    if domain == 'www.amazon.com':
-        return True
-    if domain == 'amazon.com':
-        return True
-    return False
-
     if 'clickbank.net' in domain:
         return True
     if 'clickbank.com' in domain:
@@ -30,6 +20,16 @@ def affiliate_domain(domain):
     if 'cbfeed.com' in domain:
         return True
     if 'rsscb.com' in domain:
+        return True
+    return False
+
+    if domain == 'www.amzn.to':
+        return True
+    if domain == 'amzn.to':
+        return True
+    if domain == 'www.amazon.com':
+        return True
+    if domain == 'amazon.com':
         return True
     return False
 
@@ -99,22 +99,25 @@ def main():
     f = open(options.outfile, 'w')
     for user in a_adlyusers:
         try:
-            f.write('Adly' + '\t' + str(get_follower_count(user,\
-                options.data_dir)) + '\n') 
+            f.write('Adly' + '\t' + str(user) + '\t' +\
+                str(get_follower_count(user, options.data_dir)) +\
+                '\n')
         except:
             pass
 
     for user in a_spntwusers:
         try:
-            f.write('SpnTw' + '\t' + str(get_follower_count(user,\
-                options.data_dir)) + '\n') 
+            f.write('SpnTw' + '\t' + str(user) + '\t' +\
+                    str(get_follower_count(user, options.data_dir)) +\
+                    '\n')
         except:
             pass
 
     for user in a_warriors:
         try:
-            f.write('Warrior' + '\t' + str(get_follower_count(user,\
-                options.data_dir)) + '\n') 
+            f.write('Warrior' + '\t' + str(user) + '\t' +\
+                    str(get_follower_count(user, options.data_dir)) +\
+                    '\n')
         except:
             pass
 

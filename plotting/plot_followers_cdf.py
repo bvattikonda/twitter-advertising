@@ -75,7 +75,7 @@ def main():
     plot_data = defaultdict(list)
     all_data = list()
     for line in open(args.datafile, 'r'):
-        key, value = line.strip().split('\t')
+        key, user, value = line.strip().split('\t')
         plot_data[key].append(int(value))
         all_data.append(int(value))
     print len(all_data)

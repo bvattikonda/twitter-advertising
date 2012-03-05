@@ -68,8 +68,8 @@ def main():
         partial.append((tweet_share, time_share))
     print complete_count, total_count
     f = open('temp.txt', 'w')
-    for (tw, ti) in partial:
-        f.write(str(tw) + '\t' + str(ti) + '\n')
+    for (tweet_share, time_share) in partial:
+        f.write(str(tweet_share) + '\t' + str(time_share) + '\n')
 
 if __name__ == '__main__':
     main()
