@@ -82,9 +82,10 @@ class TwitterStreamerFactory(ReconnectingClientFactory):
     def clientConnectionLost(self, connector, unused_reason):
         self.listener.connectionLost('clientConnectionLost: %s' %
             (str(unused_reason)))
-        self.initialDelay = 1
-        self.maxDelay = 16
-        self.factor = 2
+        if self.maxDelay != 240:
+            self.initialDelay = 1
+            self.maxDelay = 16
+            self.factor = 2
         ReconnectingClientFactory.clientConnectionLost(self,
             connector, unused_reason)
 
