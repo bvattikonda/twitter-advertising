@@ -4,6 +4,7 @@ from ssltwitterstream import *
 import sys
 import os
 import time
+import json
 import logging
 import optparse
 from utils import *
@@ -48,7 +49,7 @@ class Listener(TwitterStreamListener):
 
     def tweetReceived(self, tweet):
         self.unsaved += 1
-        self.current_file.write(str(tweet) + '\n')
+        self.current_file.write(json.dumps(tweet) + '\n')
         if self.unsaved == self.tweets_per_file:
             self.unsaved = 0
             self.saved += self.tweets_per_file 
@@ -68,6 +69,12 @@ class Listener(TwitterStreamListener):
 
     def connectionLost(self, reason):
         logging.critical('Connection loss: %s' % (reason))
+    
+    def onError(self, line):
+        logging.critical('Parse error: %s' % (line))
+    
+    def log(self, message):
+        logging.info(message)
 
 def parse_args():
     parser = optparse.OptionParser(description = 'Stream data from\

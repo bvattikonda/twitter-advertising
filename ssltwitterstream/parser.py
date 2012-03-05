@@ -27,8 +27,8 @@ class JSONParser(Parser):
         try:
             json = self.json_lib.loads(payload)
         except Exception, e:
-            SSLTwitterError('Failed to parse payload: %s' % e)
-            raise
+            raise SSLTwitterError('Failed to parse payload: (%s:%s)'\
+                    % (e, payload))
         return json
     
     def parse_error(self, payload):

@@ -15,11 +15,8 @@ class TwitterStreamListener(TwitterStreamerFactory):
         try:
             jsonMessage = self.parser.parse('GET', line)
         except Exception, e:
-            if 'HTTP' in line or 'Content-Type:' in line or\
-                'Connection' in line or len(line.strip()) == 0:
-                return True
-            else:
-                raise
+            self.onError(line)
+            return True
 
         ''' ignore delimiter message '''
         if isinstance(jsonMessage, int):
@@ -65,4 +62,13 @@ class TwitterStreamListener(TwitterStreamerFactory):
 
     def connectionLost(self, reason):
         ''' Called when connection with Twitter is lost '''
+        return
+    
+    def onError(self, line):
+        ''' Called on error parsing line received from Twitter '''
+        return
+    
+    def log(self, message):
+        ''' Called when the API wants to log a message '''
+        print message
         return

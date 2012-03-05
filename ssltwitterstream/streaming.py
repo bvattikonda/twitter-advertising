@@ -23,6 +23,9 @@ class TwitterStreamer(http.HTTPClient):
                 None,
                 self.factory.query,
                 None)))
+        self.factory.log(self.factory.host)
+        self.factory.log(self.factory.agent)
+        self.factory.log(self.factory.oauth_header)
         self.sendHeader('Host', self.factory.host)
         self.sendHeader('User-Agent', self.factory.agent)
         self.sendHeader('Authorization', self.factory.oauth_header)
@@ -70,6 +73,8 @@ class TwitterStreamerFactory(ReconnectingClientFactory):
         self.initialDelay = 10
         self.maxDelay = 240
         self.factory = 2
+        self.listener.log('HTTP ERROR: %s: %s: %s' % (str(version),\
+                    str(status), str(message)))
 
     def connectionMade(self):
         self.listener.connectionMade()
@@ -88,6 +93,9 @@ class TwitterStreamerFactory(ReconnectingClientFactory):
             (str(reason)))
         ReconnectingClientFactory.clientConnectionFailed(self,
             connector, reason)
+
+    def log(self, message):
+        self.listener.log(message)
     
 class Stream(object):
     def __init__(self, auth, listener):
