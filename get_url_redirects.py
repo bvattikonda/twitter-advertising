@@ -144,6 +144,7 @@ def resolve_redirects(user_id, data_dir):
                     outcome = redirects.reason
                 else:
                     outcome = e 
+
             except Exception as e:
                 outcome = str(e)
             try:
