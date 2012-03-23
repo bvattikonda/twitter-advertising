@@ -4,8 +4,6 @@ import sys
 import os
 import time
 import json
-import StringIO
-import socket
 import urllib
 import urllib2
 import urlparse
