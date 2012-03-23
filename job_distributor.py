@@ -8,27 +8,33 @@ import time
 PORT = 9000
 
 class JobDistributor(Protocol):
-    def dataReceived(self, data):
-        path, pattern = data.split('\t')
-        if (path, pattern) not in self.factory.job_listings:
-            self.factory.job_listings[(path, pattern)] = list()
-            self.factory.finished_jobs[(path, pattern)] = list()
+    def connectionMade(self):
+        print 'New connection received'
 
-        if not self.factory.job_listings:
+    def dataReceived(self, data):
+        task_id, path, pattern = data.split('\t')
+        job_key = (task_id, path, pattern)
+        if job_key not in self.factory.job_listings:
+            self.factory.job_listings[job_key] = list()
+            self.factory.finished_jobs[job_key] = list()
+
+        if not self.factory.job_listings[job_key]:
             filenames = os.listdir(path)
+            print len(filenames)
             for filename in filenames:
                 if re.match(pattern, filename) and filename not in\
-                    self.factory.finished_jobs:
-                    self.factory.job_listings[(path,\
-                            pattern)].append(filename)
+                    self.factory.finished_jobs[job_key]:
+                    self.factory.job_listings[job_key].append(filename)
 
-        if len(self.factory.job_listings) == 0:
+        if len(self.factory.job_listings[job_key]) == 0:
+            print 'Sending no job'
             self.transport.write('')
         else:
-            job = self.factory.job_listings[0]
+            job = self.factory.job_listings[job_key][0]
+            print 'Sending %s' % (job)
             self.transport.write(job)
-            self.factory.finished_jobs.append(job)
-            del self.factory.job_listings[0]
+            self.factory.finished_jobs[job_key].append(job)
+            del self.factory.job_listings[job_key][0]
         self.transport.loseConnection()
 
 class JobDistributionFactory(ServerFactory):
