@@ -38,6 +38,7 @@ def main():
         userinfo = lookup_user(api_info, screen_name = options.user)
     print userinfo
 
+    sys.exit(1)
     tweets = get_user_tweets(api_info, user_id = userinfo['id'])
     for tweet in tweets:
         print tweet

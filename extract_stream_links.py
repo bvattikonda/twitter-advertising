@@ -47,6 +47,7 @@ def main():
     options = parser.parse_args()[0]
     if not correct_options(options):
         parser.print_help()
+        sys.exit(1)
 
     # set up logging
     logging.basicConfig(filename = os.path.join(options.stream_data,\
@@ -88,7 +89,9 @@ def main():
                     baseURL = url['url'].strip()
                 else:
                     continue
-                links_file.write(baseURL + '\n')
+                links_file.write(json.dumps(tweet['id']) + '\t' +\
+                        json.dumps(tweet['user']['id']) + '\t' +\
+                        baseURL.encode('utf8', 'ignore') + '\n')
 
         links_file.close()
         current_file.close()
