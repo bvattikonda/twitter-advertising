@@ -40,7 +40,6 @@ def get_plot_data(links_dir):
         if scammer:
             print linksfilename, unique_domains
             plot_data.append(len(unique_domains))
-            time.sleep(100)
 
     return plot_data
 

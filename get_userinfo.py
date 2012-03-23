@@ -37,6 +37,10 @@ def main():
     else:
         userinfo = lookup_user(api_info, screen_name = options.user)
     print userinfo
+
+    tweets = get_user_tweets(api_info, user_id = userinfo['id'])
+    for tweet in tweets:
+        print tweet
     
 if __name__ == '__main__':
     main()

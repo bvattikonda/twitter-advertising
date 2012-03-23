@@ -21,11 +21,13 @@ def parse_args():
         any) has to be written')
     return parser
 
+# Number of followers of the user
 def get_follower_count(user_id, data_dir):
     userfile = open(os.path.join(data_dir, str(user_id) + '.txt'), 'r')
     user_info = json.loads(userfile.readline())
     return user_info['followers_count']
 
+# Number of friends of the user
 def get_friend_count(user_id, data_dir):
     userfile = open(os.path.join(data_dir, str(user_id) + '.txt'), 'r')
     user_info = json.loads(userfile.readline())
