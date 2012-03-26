@@ -50,15 +50,17 @@ def fixURLEncoding(baseURL):
     netloc = ''.join((user,colon1,pass_,at,host,colon2,port))
     return urlparse.urlunsplit((scheme,netloc,path,query,fragment))
 
-class ResolveURLThread(Thread):
+class ResolveRedirectsThread(Thread):
     def __init__(self, outcomes, links_to_resolve):
         Thread.__init__(self)
-        self.links_to_resolve = links_to_resolve
         self.outcomes = outcomes
+        self.links_to_resolve = links_to_resolve
     
     def run(self):
+        logging.info('Starting thread')
         count = 0
         while True:
+            success = False
             baseURL = self.links_to_resolve.get()
             baseURL = fixURL(baseURL)
             baseURL = fixURLEncoding(baseURL)
@@ -76,6 +78,7 @@ class ResolveURLThread(Thread):
             except Exception as e:
                 outcome = str(e)
 
-            self.outcomes.put(outcome)
+            self.outcomes.put((outcome, success, baseURL))
             count = count + 1
+            self.links_to_resolve.task_done()
         logging.info('Thread: Resolved %d links' % (count))
