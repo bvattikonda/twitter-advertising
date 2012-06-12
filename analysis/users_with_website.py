@@ -18,8 +18,11 @@ def user_has_website(user_id, data_dir):
         userinfo = json.loads(userfile.readline().strip())
     except ValueError:
         return False
-    if userinfo['url']:
-        return True
+    try:
+        if userinfo['url']:
+            return True
+    except KeyError:
+        pass
     return False
 
 def get_www_users(user_ids, data_dir):
@@ -39,9 +42,9 @@ def main():
     adlyusers = load_users(options.a)
     spntwusers = load_users(options.s)
     warriors = load_users(options.w)
-    fetched_adlyusers = fetched(adlyusers, '.txt', options.data_dir)
-    fetched_spntwusers = fetched(spntwusers, '.txt', options.data_dir)
-    fetched_warriors = fetched(warriors, '.txt', options.data_dir)
+    fetched_adlyusers = fetched(adlyusers, '.links', options.data_dir)
+    fetched_spntwusers = fetched(spntwusers, '.links', options.data_dir)
+    fetched_warriors = fetched(warriors, '.links', options.data_dir)
 
     www_adlyusers = get_www_users(fetched_adlyusers, options.data_dir)
     www_spntwusers = get_www_users(fetched_spntwusers,\

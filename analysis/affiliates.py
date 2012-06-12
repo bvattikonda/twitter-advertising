@@ -85,7 +85,7 @@ def main():
                         options.data_dir)
     a_warriors = get_a_users(fetched_warriors, options.data_dir)
 
-    print '--- Users who advertise Amazon'
+    print '--- Users who advertise Clickbank'
     print 'Adly:\n%d\t%d\t%.2f' % (len(a_adlyusers),\
         len(fetched_adlyusers),\
         len(a_adlyusers) / float(len(fetched_adlyusers)))
@@ -96,6 +96,7 @@ def main():
         len(fetched_warriors),\
         len(a_warriors) / float(len(fetched_warriors)))
 
+    sys.exit(1)
     f = open(options.outfile, 'w')
     for user in a_adlyusers:
         try:

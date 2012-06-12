@@ -6,6 +6,7 @@ import urlparse
 from urlredirects import *
 from utils import *
 from threading import Thread
+from Queue import Empty
 import logging
 
 def fixURL(baseURL):
@@ -61,7 +62,10 @@ class ResolveRedirectsThread(Thread):
         count = 0
         while True:
             success = False
-            baseURL = self.links_to_resolve.get()
+            try:
+                baseURL = self.links_to_resolve.get_nowait()
+            except Empty:
+                break 
             baseURL = fixURL(baseURL)
             baseURL = fixURLEncoding(baseURL)
 

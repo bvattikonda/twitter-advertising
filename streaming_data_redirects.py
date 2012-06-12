@@ -54,8 +54,6 @@ def execute_job(data_dir, num_workers, linksfilename):
             logging.critical('%s already resolved' % (linksfilename))
             return
 
-    outfile = open(os.path.join(data_dir, outfilename), 'w')
-    
     # read the list of suspended users, links tweeted by these users
     # can be ignored
     suspended_users = set()
@@ -90,6 +88,7 @@ def execute_job(data_dir, num_workers, linksfilename):
 
     # write output to file
     links_to_resolve.join()
+    outfile = open(os.path.join(data_dir, outfilename), 'w')
 
     while not outcomes.empty():
         outcome, success, baseURL = outcomes.get()

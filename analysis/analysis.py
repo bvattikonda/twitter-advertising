@@ -3,11 +3,38 @@
 import optparse
 import os
 import json
+import ast
 from urlparse import urlparse
 
 def get_domain(url):
     parseresult = urlparse(url)
-    return parseresult.netloc.lower()
+    domain = parseresult.netloc.lower()
+    if domain.startswith('www.'):
+        domain = domain.replace('www.', '')
+    return domain
+
+# @line is a line from the links file
+# returns None if the answer cannot be determined correctly
+def get_destination_domain(line):
+    splitline = line.strip().split('\t')
+    success = False
+    try:
+        success = json.loads(splitline[2])
+    except:
+        return None
+    if not success:
+        return None
+
+    try:
+        redirect_list = ast.literal_eval(splitline[3])
+    except:
+        return None
+
+    baseURL = splitline[1]
+    destination_domain = get_domain(baseURL)
+    if len(redirect_list):
+        destination_domain = get_domain(redirect_list[-1][1])
+    return destination_domain
 
 def parse_args():
     usage = 'usage: %prog [options]'
